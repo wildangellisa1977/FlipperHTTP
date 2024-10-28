@@ -23,7 +23,7 @@ HTTP library for Flipper Zero. Compatible with Wifi Dev Board for Flipper Zero (
 
 You are all set. Here's the initial guide: [https://www.youtube.com/watch?v=AZfbrLKJMpM](https://www.youtube.com/watch?v=AZfbrLKJMpM)
 
-Star the repository (https://github.com/jblanked/WebCrawler-FlipperZero) and follow me for updates and upcoming Flipper apps.
+Star the repository (https://github.com/jblanked/FlipperHTTP) and follow me for updates and upcoming Flipper apps.
 
 ## Apps That Utilize FlipperHTTP
 The following apps have integrated FlipperHTTP to enhance their functionalities:
