@@ -1,6 +1,8 @@
 # FlipperHTTP
 HTTP library for Flipper Zero. Compatible with Wifi Dev Board for Flipper Zero (ESP32S2 Dev Module). View the extended documentation here: https://www.jblanked.com/api/FlipperHTTP/
 
+Star the repository (https://github.com/jblanked/FlipperHTTP) and follow me for updates and upcoming Flipper apps.
+
 ## WiFi Devboard Installation
 1. Download the `flipper_http_bootloader.bin`, `flipper_http_firmware_a.bin`, and `flipper_http_partitions.bin` files.
 2. Unplug your Wifi Dev Board and connect your Flipper Zero to your computer.
@@ -21,9 +23,27 @@ HTTP library for Flipper Zero. Compatible with Wifi Dev Board for Flipper Zero (
 15. Click on FLASH - slow. If successful, you will see three green LED blinks on the Dev board.
 16. On the Dev Board, press the RESET button once.
 
-You are all set. Here's the initial guide: [https://www.youtube.com/watch?v=AZfbrLKJMpM](https://www.youtube.com/watch?v=AZfbrLKJMpM)
+You are all set. Here's the initial WiFi Devboard guide: [https://www.youtube.com/watch?v=AZfbrLKJMpM](https://www.youtube.com/watch?v=AZfbrLKJMpM)
 
-Star the repository (https://github.com/jblanked/FlipperHTTP) and follow me for updates and upcoming Flipper apps.
+## Raspberry Pi Pico W Installation (MicroPython)
+
+1. Download the `main.py` and `FlipperHTTPPico.py` files.
+2. Press and hold the `BOOT` button on your Pico W for 2 seconds.
+3. While continuing to hold the `BOOT` button, connect the Pico W to your computer using a USB cable.
+4. The Pico W should appear as a storage device on your computer.
+5. Drag and drop the previously downloaded files onto the device.
+6. Download Thonny from [https://thonny.org](https://thonny.org).
+7. Install MicroPython:
+   - Go to `Run -> Configure interpreter`.
+   - Select `MicroPython (Raspberry Pi Pico)` in the `Which kind of interpreter...` field.
+   - Click `Install or update MicroPython`. The target volume and MicroPython family should appear. If not, ensure your Pico W is plugged in.
+   - Choose `Raspberry Pi - Pico W / Pico WH` in the `Variant` field.
+   - Click `Install`. When the installation is complete, your Pico W will automatically reboot, and FlipperHTTP will start running with MicroPython.
+
+## Raspberry Pi Pico W Installation (C++)
+
+1. Download the `flipper_http_pico_c++.uf2` file.
+2. Drag and drop the downloaded file onto the device. It will automatically reboot and begin running the FlipperHTTP firmware.
 
 ## Apps That Utilize FlipperHTTP
 The following apps have integrated FlipperHTTP to enhance their functionalities:
