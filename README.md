@@ -61,7 +61,7 @@ The following apps have integrated FlipperHTTP to enhance their functionalities:
 - **Web Crawler** - Allows your Flipper Zero to crawl and interact with websites directly: https://github.com/jblanked/WebCrawler-FlipperZero
 - **FlipWeather** - Use WiFi to get GPS and Weather information on your Flipper Zero: https://github.com/jblanked/FlipWeather
 - **FlipTrader** - Use WiFi to get the price of stocks and currency pairs on your Flipper Zero: https://github.com/jblanked/FlipTrader
-- **FlipWiFi** - FlipperHTTP companion app. Scan and save WiFi networks on your Flipper Zero: https://github.com/jblanked/FlipTrader
+- **FlipWiFi** - FlipperHTTP companion app. Scan and save WiFi networks on your Flipper Zero: https://github.com/jblanked/FlipWiFi
 
 
 ## Usage in `C` (flipper_http.h)
