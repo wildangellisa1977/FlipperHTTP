@@ -211,9 +211,9 @@ class FlipperHTTP:
     def loop(self):
         """Main loop to handle the serial communication"""
         while True:
-            if self.uart.any():
-                data = self.uart.read().decode()
+            if self.uart.any() > 0:
                 self.ledStatus()
+                data = self.uart.read().decode()
 
                 if data.startswith("[LIST]"):
                     self.uart.write(
@@ -221,19 +221,19 @@ class FlipperHTTP:
                     )
 
                 # handle [LED/ON] command
-                elif data.startsWith("[LED/ON]"):
+                elif data.startswith("[LED/ON]"):
                     self.use_led = True
 
                 # handle [LED/OFF] command
-                elif data.startsWith("[LED/OFF]"):
+                elif data.startswith("[LED/OFF]"):
                     self.use_led = False
 
                 # handle [IP/ADDRESS] command (local IP)
-                elif data.startsWith("[IP/ADDRESS]"):
+                elif data.startswith("[IP/ADDRESS]"):
                     self.uart.write(self.local_ip)
 
                 # handle [WIFI/IP] command (wifi IP)
-                elif data.startsWith("[WIFI/IP]"):
+                elif data.startswith("[WIFI/IP]"):
                     res = self.get("https://ipwhois.app/json/")
                     if res is not None:
                         self.wifi_ip = res.json()["ip"]
@@ -244,21 +244,21 @@ class FlipperHTTP:
                         )
 
                 # Ping/Pong to see if board/flipper is connected
-                elif data.startsWith("[PING]"):
+                elif data.startswith("[PING]"):
                     self.uart.write("[PONG]")
 
                 # Handle [REBOOT] command
-                elif data.startsWith("[REBOOT]"):
+                elif data.startswith("[REBOOT]"):
                     # machine.reset()
                     pass
 
                 # scan for wifi networks
-                elif data.startsWith("[WIFI/SCAN]"):
+                elif data.startswith("[WIFI/SCAN]"):
                     networks = self.wlan.scan()
                     self.uart.write(ujson.dumps(networks))
 
                 # Handle [WIFI/SAVE] command
-                elif data.startsWith("[WIFI/SAVE]"):
+                elif data.startswith("[WIFI/SAVE]"):
                     # Extract the JSON by removing the command part
                     json_data = data.replace("[WIFI/SAVE]", "")
                     if self.saveWifiSettings(json_data):
@@ -267,7 +267,7 @@ class FlipperHTTP:
                         self.uart.write("[ERROR] Failed to save WiFi settings.")
 
                 # Handle [WIFI/CONNECT] command
-                elif data.startsWith("[WIFI/CONNECT]"):
+                elif data.startswith("[WIFI/CONNECT]"):
                     if not self.isConnectedToWiFi():
                         self.connectToWiFi()
                         if self.isConnectedToWiFi():
@@ -278,12 +278,12 @@ class FlipperHTTP:
                         self.uart.write("[INFO] Already connected to WiFi")
 
                 # Handle [WIFI/DISCONNECT] command
-                elif data.startsWith("[WIFI/DISCONNECT]"):
+                elif data.startswith("[WIFI/DISCONNECT]"):
                     self.wlan.disconnect()
                     self.uart.write("[DISCONNECTED] Wifi has been disconnected.")
 
                 # Handle [GET] command
-                elif data.startsWith("[GET]"):
+                elif data.startswith("[GET]"):
                     # Extract URL by removing the command part
                     url = data.replace("[GET]", "")
                     res = self.get(url)
@@ -297,7 +297,7 @@ class FlipperHTTP:
                         )
 
                 # Handle [GET/HTTP] command
-                elif data.startsWith("[GET/HTTP]"):
+                elif data.startswith("[GET/HTTP]"):
                     # Extract the JSON by removing the command part
                     json_data = data.replace("[GET/HTTP]", "")
                     data = ujson.loads(json_data)
@@ -318,7 +318,7 @@ class FlipperHTTP:
                         )
 
                 # Handle [POST/HTTP] command
-                elif data.startsWith("[POST/HTTP]"):
+                elif data.startswith("[POST/HTTP]"):
                     # Extract the JSON by removing the command part
                     json_data = data.replace("[POST/HTTP]", "")
                     data = ujson.loads(json_data)
@@ -340,7 +340,7 @@ class FlipperHTTP:
                         )
 
                 # Handle [PUT/HTTP] command
-                elif data.startsWith("[PUT/HTTP]"):
+                elif data.startswith("[PUT/HTTP]"):
                     # Extract the JSON by removing the command part
                     json_data = data.replace("[PUT/HTTP]", "")
                     data = ujson.loads(json_data)
@@ -362,7 +362,7 @@ class FlipperHTTP:
                         )
 
                 # Handle [DELETE/HTTP] command
-                elif data.startsWith("[DELETE/HTTP]"):
+                elif data.startswith("[DELETE/HTTP]"):
                     # Extract the JSON by removing the command part
                     json_data = data.replace("[DELETE/HTTP]", "")
                     data = ujson.loads(json_data)
@@ -383,7 +383,7 @@ class FlipperHTTP:
                         )
 
                 # Handle [GET/BYTES] command
-                elif data.startsWith("[GET/BYTES]"):
+                elif data.startswith("[GET/BYTES]"):
                     # Extract the JSON by removing the command part
                     json_data = data.replace("[GET/BYTES]", "")
                     data = ujson.loads(json_data)
@@ -404,7 +404,7 @@ class FlipperHTTP:
                         )
 
                 # Handle [POST/BYTES] command
-                elif data.startsWith("[POST/BYTES]"):
+                elif data.startswith("[POST/BYTES]"):
                     # Extract the JSON by removing the command part
                     json_data = data.replace("[POST/BYTES]", "")
                     data = ujson.loads(json_data)
@@ -426,7 +426,7 @@ class FlipperHTTP:
                         )
 
                 # Handle [PARSE] command
-                elif data.startsWith("[PARSE]"):
+                elif data.startswith("[PARSE]"):
                     # Extract the JSON by removing the command part
                     json_data = data.replace("[PARSE]", "")
                     data = ujson.loads(json_data)
@@ -445,7 +445,7 @@ class FlipperHTTP:
                         self.uart.write("[ERROR] JSON parsing failed or key not found.")
 
                 # Handle [PARSE/ARRAY] command
-                elif data.startsWith("[PARSE/ARRAY]"):
+                elif data.startswith("[PARSE/ARRAY]"):
                     # Extract the JSON by removing the command part
                     json_data = data.replace("[PARSE/ARRAY]", "")
                     data = ujson.loads(json_data)

@@ -18,5 +18,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         led.off()
     except Exception as e:
-        print(f"Error: {e}")
-        led.off()
+        with open("error.txt", "w") as f:
+            f.write(str(e))
+        fhttp.ledStart()
