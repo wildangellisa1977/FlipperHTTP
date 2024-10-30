@@ -1,7 +1,7 @@
 # FlipperHTTP
 HTTP library for Flipper Zero. Compatible with Wifi Dev Board for Flipper Zero (ESP32S2 Dev Module). View the extended documentation here: https://www.jblanked.com/api/FlipperHTTP/
 
-Star the repository (https://github.com/jblanked/FlipperHTTP) and follow me for updates and upcoming Flipper apps.
+Star the repository and [follow me](https://www.github.com/jblanked) for updates and upcoming Flipper apps.
 
 ## WiFi Devboard Installation
 1. Download the `flipper_http_bootloader.bin`, `flipper_http_firmware_a.bin`, and `flipper_http_partitions.bin` files.
