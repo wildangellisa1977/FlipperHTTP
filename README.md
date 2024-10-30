@@ -14,7 +14,7 @@ HTTP library for Flipper Zero. Compatible with Wifi Dev Board for Flipper Zero (
 10. In the ESP Flasher app, select the following options:
     - "Reset Board": wait a few seconds, then go back.
     - "Enter Bootloader": wait until the 'waiting for download' message appears, then go back.
-11. Click on Manual Flash.
+11. Click on `Manual Flash`, if you do not see this option at the top of the main menu, then click `Flash ESP`.
 12. Click on Bootloader and select the `flipper_http_bootloader.bin` that you downloaded earlier.
 13. Click on Part Table and select the `flipper_http_partitions.bin` that you downloaded earlier.
 14. Click on FirmwareA and select the `flipper_http_firmware_a.bin` that you downloaded earlier.
