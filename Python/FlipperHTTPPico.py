@@ -257,6 +257,15 @@ class FlipperHTTP:
                     networks = self.wlan.scan()
                     self.uart.write(ujson.dumps(networks))
 
+                # Handle [WIFI/SAVE] command
+                elif data.startsWith("[WIFI/SAVE]"):
+                    # Extract the JSON by removing the command part
+                    json_data = data.replace("[WIFI/SAVE]", "")
+                    if self.saveWifiSettings(json_data):
+                        self.uart.write("[SUCCESS] Saved WiFi settings.")
+                    else:
+                        self.uart.write("[ERROR] Failed to save WiFi settings.")
+
                 # Handle [WIFI/CONNECT] command
                 elif data.startsWith("[WIFI/CONNECT]"):
                     if not self.isConnectedToWiFi():
