@@ -13,7 +13,8 @@ from machine import UART, Pin
 import network
 import urequests as requests
 import ujson
-from time import sleep
+from time import sleep, ticks_ms
+import errno
 
 led = Pin("LED", Pin.OUT)  # LED on the Pico W
 BAUD_RATE = 115200
@@ -27,10 +28,31 @@ class FlipperHTTP:
         self.ssid = None
         self.password = None
         self.use_led = True
+        self.timeout = 2000  # milliseconds
+
+    def saveError(self, err, is_os_error: bool = False) -> None:
+        if not is_os_error:
+            with open("error.txt", "w") as f:
+                f.write(f"Error: {err}")
+        else:
+            if err.errno == errno.ENOENT:
+                reason = "File or directory not found."
+            elif err.errno == errno.EACCES:
+                reason = "Permission denied."
+            elif err.errno == errno.ECONNREFUSED:
+                reason = "Connection refused."
+            elif err.errno == errno.EPERM:
+                reason = "Operation not permitted."
+            else:
+                reason = str(err)
+
+            with open("error.txt", "w") as f:
+                f.write(f"OSError: {reason}")
 
     def setup(self) -> None:
         """Start UART and load the WiFi credentials"""
         self.uart = UART(0, baudrate=BAUD_RATE, tx=Pin(0), rx=Pin(1))
+        self.uart.init()
         self.use_led = True
         self.ledStart()
         self.loadWifiSettings()
@@ -55,7 +77,7 @@ class FlipperHTTP:
 
     def connectToWiFi(self) -> bool:
         if self.ssid is None or self.password is None:
-            self.uart.write("[ERROR] WiFi SSID or Password is empty.")
+            self.println("[ERROR] WiFi SSID or Password is empty.")
             return False
         try:
             self.wlan.active(True)
@@ -65,12 +87,12 @@ class FlipperHTTP:
                     self.uart.write(".")
                     sleep(0.5)
             if self.wlan.isconnected():
-                self.uart.write("[SUCCESS] Successfully connected to Wifi.")
+                self.println("[SUCCESS] Successfully connected to Wifi.")
                 self.local_ip = self.wlan.ifconfig()[0]
                 return True
         except Exception as e:
-            print(f"Error: {e}")
-            self.uart.write("[ERROR] Failed to connect to Wifi.")
+            self.saveError(e)
+            self.println("[ERROR] Failed to connect to Wifi.")
             return False
 
     def isConnectedToWiFi(self) -> bool:
@@ -84,7 +106,7 @@ class FlipperHTTP:
             new_password = data.get("password")
 
             if not new_ssid or not new_password:
-                self.uart.write("[ERROR] SSID or Password is empty.")
+                self.println("[ERROR] SSID or Password is empty.")
                 return False
 
             # Load existing settings
@@ -95,10 +117,10 @@ class FlipperHTTP:
                 if e.errno == errno.ENOENT:
                     settings = {"wifi_list": []}  # Initialize if file doesn't exist
                 else:
-                    print(e)
+                    self.saveError(e, True)
                     return False
             except Exception as e:
-                self.uart.write(f"[ERROR] Failed to load existing settings: {e}")
+                self.println(f"[ERROR] Failed to load existing settings: {e}")
                 return False
 
             # Check if SSID already exists in the list
@@ -118,21 +140,21 @@ class FlipperHTTP:
                 try:
                     with open("flipper-http.json", "w") as f:
                         f.write(ujson.dumps(settings))
-                    self.uart.write("[SUCCESS] Settings saved.")
+                    self.println("[SUCCESS] Settings saved.")
                     self.ssid = new_ssid
                     self.password = new_password
                     return True
                 except Exception as e:
-                    self.uart.write(f"[ERROR] Failed to open file for writing: {e}")
+                    self.println(f"[ERROR] Failed to open file for writing: {e}")
                     return False
 
             self.ssid = new_ssid
             self.password = new_password
-            self.uart.write("[INFO] SSID already exists in settings.")
+            self.println("[INFO] SSID already exists in settings.")
             return True
 
         except ValueError:
-            self.uart.write("[ERROR] Failed to parse JSON data.")
+            self.println("[ERROR] Failed to parse JSON data.")
             return False
 
     def loadWifiSettings(self) -> bool:
@@ -167,7 +189,7 @@ class FlipperHTTP:
             return False
 
         except (OSError, ValueError) as e:
-            print(f"[ERROR] Failed to load or parse settings file: {e}\n")
+            self.saveError("Failed to load or parse settings file: {e}")
             return False
 
     def get(self, url, headers=None) -> Response:
@@ -208,15 +230,58 @@ class FlipperHTTP:
             return requests.patch(url, headers=headers, data=data)
         return requests.patch(url, headers=headers, data=ujson.dumps(data))
 
+    def write(self, message: bytes):
+        self.uart.write(message)
+
+    def println(self, message: str):
+        self.uart.write(message + "\n")
+
+    def readSerialLine(self) -> str:
+        data = ""
+        try:
+            raw_data = self.uart.read()
+            if raw_data:  # Ensures raw_data isn't empty before decoding
+                data = raw_data.decode()
+        except Exception as e:
+            pass  # raw_data is empty/None
+        return data
+
+    def readLine(self) -> str:
+        start_time = ticks_ms()
+        message = ""
+
+        while (ticks_ms() - start_time) < self.timeout:
+            if self.uart.any() > 0:
+                try:
+                    raw_data = self.uart.read()
+                    if raw_data:
+                        # Reset the timeout when data is read
+                        start_time = ticks_ms()
+                        message += raw_data.decode()
+
+                        if "\n" in message:
+                            message = message.strip("\n")
+                            return message
+                except Exception as e:
+                    continue
+
+        # Timeout reached with no newline received
+        return None
+
     def loop(self):
         """Main loop to handle the serial communication"""
         while True:
             if self.uart.any() > 0:
+                data = self.readLine()
+
                 self.ledStatus()
-                data = self.uart.read().decode()
+
+                if not data:  # Checks for None or empty string
+                    led.off()
+                    continue
 
                 if data.startswith("[LIST]"):
-                    self.uart.write(
+                    self.println(
                         "[LIST],[PING], [REBOOT], [WIFI/IP], [WIFI/SCAN], [WIFI/SAVE], [WIFI/CONNECT], [WIFI/DISCONNECT], [WIFI/LIST], [GET], [GET/HTTP], [POST/HTTP], [PUT/HTTP], [DELETE/HTTP], [GET/BYTES], [POST/BYTES], [PARSE], [PARSE/ARRAY], [LED/ON], [LED/OFF], [IP/ADDRESS]"
                     )
 
@@ -230,57 +295,66 @@ class FlipperHTTP:
 
                 # handle [IP/ADDRESS] command (local IP)
                 elif data.startswith("[IP/ADDRESS]"):
-                    self.uart.write(self.local_ip)
+                    self.println(self.local_ip)
 
                 # handle [WIFI/IP] command (wifi IP)
                 elif data.startswith("[WIFI/IP]"):
                     res = self.get("https://ipwhois.app/json/")
                     if res is not None:
                         self.wifi_ip = res.json()["ip"]
-                        self.uart.write(self.wifi_ip)
+                        self.println(self.wifi_ip)
                     else:
-                        self.uart.write(
+                        self.println(
                             "[ERROR] GET request failed or returned empty data."
                         )
 
                 # Ping/Pong to see if board/flipper is connected
                 elif data.startswith("[PING]"):
-                    self.uart.write("[PONG]")
+                    self.println("[PONG]")
 
                 # Handle [REBOOT] command
                 elif data.startswith("[REBOOT]"):
-                    # machine.reset()
+                    machine.reset()
                     pass
 
                 # scan for wifi networks
                 elif data.startswith("[WIFI/SCAN]"):
-                    networks = self.wlan.scan()
-                    self.uart.write(ujson.dumps(networks))
+                    try:
+                        ap = network.WLAN(network.AP_IF)
+                        ap.active(True)
+                        networks = ap.scan()
+                        network_data = []
+                        for w in networks:
+                            network_data.append(w[0].decode())
+                        self.println(str(network_data))
+                        ap.active(False)
+                    except Exception as e:
+                        pass
 
                 # Handle [WIFI/SAVE] command
                 elif data.startswith("[WIFI/SAVE]"):
                     # Extract the JSON by removing the command part
                     json_data = data.replace("[WIFI/SAVE]", "")
                     if self.saveWifiSettings(json_data):
-                        self.uart.write("[SUCCESS] Saved WiFi settings.")
+                        self.println("[SUCCESS] Saved WiFi settings.")
                     else:
-                        self.uart.write("[ERROR] Failed to save WiFi settings.")
+                        self.println("[ERROR] Failed to save WiFi settings.")
 
                 # Handle [WIFI/CONNECT] command
                 elif data.startswith("[WIFI/CONNECT]"):
                     if not self.isConnectedToWiFi():
                         self.connectToWiFi()
                         if self.isConnectedToWiFi():
-                            self.uart.write("[SUCCESS] Connected to WiFi")
+                            self.println("[SUCCESS] Connected to WiFi")
                         else:
-                            self.uart.write("[ERROR] Failed to connect to Wifi.")
+                            self.println("[ERROR] Failed to connect to Wifi.")
                     else:
-                        self.uart.write("[INFO] Already connected to WiFi")
+                        self.println("[INFO] Already connected to WiFi")
 
                 # Handle [WIFI/DISCONNECT] command
                 elif data.startswith("[WIFI/DISCONNECT]"):
                     self.wlan.disconnect()
-                    self.uart.write("[DISCONNECTED] Wifi has been disconnected.")
+                    self.println("[DISCONNECTED] Wifi has been disconnected.")
 
                 # Handle [GET] command
                 elif data.startswith("[GET]"):
@@ -288,11 +362,12 @@ class FlipperHTTP:
                     url = data.replace("[GET]", "")
                     res = self.get(url)
                     if res is not None:
-                        self.uart.write("[GET/SUCCESS] GET request successful.")
-                        self.uart.write(res.text)
-                        self.uart.write("[GET/END]")
+                        self.println("[GET/SUCCESS] GET request successful.")
+                        self.println(res.text)
+                        self.uart.flush()
+                        self.println("[GET/END]")
                     else:
-                        self.uart.write(
+                        self.println(
                             "[ERROR] GET request failed or returned empty data."
                         )
 
@@ -304,16 +379,17 @@ class FlipperHTTP:
                     url = data["url"]
                     headers = data["headers"]
                     if not url:
-                        self.uart.write("[ERROR] JSON does not contain url.")
+                        self.println("[ERROR] JSON does not contain url.")
                     if not headers:
                         headers = None
                     res = self.get(data["url"], data["headers"])
                     if res is not None:
-                        self.uart.write("[GET/SUCCESS] GET request successful.")
-                        self.uart.write(res.text)
-                        self.uart.write("[GET/END]")
+                        self.println("[GET/SUCCESS] GET request successful.")
+                        self.println(res.text)
+                        self.uart.flush()
+                        self.println("[GET/END]")
                     else:
-                        self.uart.write(
+                        self.println(
                             "[ERROR] GET request failed or returned empty data."
                         )
 
@@ -326,16 +402,17 @@ class FlipperHTTP:
                     headers = data["headers"]
                     payload = data["payload"]
                     if not url or not payload:
-                        self.uart.write("[ERROR] JSON does not contain url or payload.")
+                        self.println("[ERROR] JSON does not contain url or payload.")
                     if not headers:
                         headers = None
                     res = self.post(url, payload, headers)
                     if res is not None:
-                        self.uart.write("[POST/SUCCESS] POST request successful.")
-                        self.uart.write(res.text)
-                        self.uart.write("[POST/END]")
+                        self.println("[POST/SUCCESS] POST request successful.")
+                        self.println(res.text)
+                        self.uart.flush()
+                        self.println("[POST/END]")
                     else:
-                        self.uart.write(
+                        self.println(
                             "[ERROR] POST request failed or returned empty data."
                         )
 
@@ -348,16 +425,17 @@ class FlipperHTTP:
                     headers = data["headers"]
                     payload = data["payload"]
                     if not url or not payload:
-                        self.uart.write("[ERROR] JSON does not contain url or payload.")
+                        self.println("[ERROR] JSON does not contain url or payload.")
                     if not headers:
                         headers = None
                     res = self.put(url, payload, headers)
                     if res is not None:
-                        self.uart.write("[PUT/SUCCESS] PUT request successful.")
-                        self.uart.write(res.text)
-                        self.uart.write("[PUT/END]")
+                        self.println("[PUT/SUCCESS] PUT request successful.")
+                        self.println(res.text)
+                        self.uart.flush()
+                        self.println("[PUT/END]")
                     else:
-                        self.uart.write(
+                        self.println(
                             "[ERROR] PUT request failed or returned empty data."
                         )
 
@@ -369,16 +447,17 @@ class FlipperHTTP:
                     url = data["url"]
                     headers = data["headers"]
                     if not url:
-                        self.uart.write("[ERROR] JSON does not contain url.")
+                        self.println("[ERROR] JSON does not contain url.")
                     if not headers:
                         headers = None
                     res = self.delete(url, headers)
                     if res is not None:
-                        self.uart.write("[DELETE/SUCCESS] DELETE request successful.")
-                        self.uart.write(res.text)
-                        self.uart.write("[DELETE/END]")
+                        self.println("[DELETE/SUCCESS] DELETE request successful.")
+                        self.println(res.text)
+                        self.uart.flush()
+                        self.println("[DELETE/END]")
                     else:
-                        self.uart.write(
+                        self.println(
                             "[ERROR] DELETE request failed or returned empty data."
                         )
 
@@ -390,16 +469,17 @@ class FlipperHTTP:
                     url = data["url"]
                     headers = data["headers"]
                     if not url:
-                        self.uart.write("[ERROR] JSON does not contain url.")
+                        self.println("[ERROR] JSON does not contain url.")
                     if not headers:
                         headers = None
                     res = self.get(url, headers)
                     if res is not None:
-                        self.uart.write("[GET/SUCCESS] GET request successful.")
-                        self.uart.write(res.content)
-                        self.uart.write("[GET/END]")
+                        self.println("[GET/SUCCESS] GET request successful.")
+                        self.write(res.content)
+                        self.uart.flush()
+                        self.println("[GET/END]")
                     else:
-                        self.uart.write(
+                        self.println(
                             "[ERROR] GET request failed or returned empty data."
                         )
 
@@ -412,16 +492,17 @@ class FlipperHTTP:
                     headers = data["headers"]
                     payload = data["payload"]
                     if not url or not payload:
-                        self.uart.write("[ERROR] JSON does not contain url or payload.")
+                        self.println("[ERROR] JSON does not contain url or payload.")
                     if not headers:
                         headers = None
                     res = self.post(url, payload, headers)
                     if res is not None:
-                        self.uart.write("[POST/SUCCESS] POST request successful.")
+                        self.println("[POST/SUCCESS] POST request successful.")
                         self.uart.write(res.content)
-                        self.uart.write("[POST/END]")
+                        self.uart.flush()
+                        self.println("[POST/END]")
                     else:
-                        self.uart.write(
+                        self.println(
                             "[ERROR] POST request failed or returned empty data."
                         )
 
@@ -433,16 +514,16 @@ class FlipperHTTP:
                     json = data["json"]
                     key = data["key"]
                     if not json or not key:
-                        self.uart.write("[ERROR] JSON does not contain key or json.")
+                        self.println("[ERROR] JSON does not contain key or json.")
                     res = ujson.loads(json)
                     if res is not None:
                         found_key = res.get(key)
                         if found_key:
-                            self.uart.write(found_key)
+                            self.println(found_key)
                         else:
-                            self.uart.write("[ERROR] Key not found in JSON.")
+                            self.println("[ERROR] Key not found in JSON.")
                     else:
-                        self.uart.write("[ERROR] JSON parsing failed or key not found.")
+                        self.println("[ERROR] JSON parsing failed or key not found.")
 
                 # Handle [PARSE/ARRAY] command
                 elif data.startswith("[PARSE/ARRAY]"):
@@ -453,17 +534,17 @@ class FlipperHTTP:
                     key = data["key"]
                     index = data["index"]
                     if not json or not key or not index:
-                        self.uart.write(
+                        self.println(
                             "[ERROR] JSON does not contain key, index or json."
                         )
                     res = ujson.loads(json)
                     if res is not None:
                         found_key = res.get(key)
                         if found_key:
-                            self.uart.write(found_key[index])
+                            self.println(found_key[index])
                         else:
-                            self.uart.write("[ERROR] Key not found in JSON.")
+                            self.println("[ERROR] Key not found in JSON.")
                     else:
-                        self.uart.write("[ERROR] JSON parsing failed or key not found.")
+                        self.println("[ERROR] JSON parsing failed or key not found.")
 
                 led.off()

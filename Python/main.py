@@ -9,6 +9,7 @@ Updated: 2024-10-30
 
 from FlipperHTTPPico import FlipperHTTP, led
 
+
 fhttp = FlipperHTTP()
 
 if __name__ == "__main__":
@@ -17,7 +18,9 @@ if __name__ == "__main__":
         fhttp.loop()
     except KeyboardInterrupt:
         led.off()
-    except Exception as e:
-        with open("error.txt", "w") as f:
-            f.write(str(e))
+    except OSError as e:
         fhttp.ledStart()
+        fhttp.saveError(e, True)
+    except Exception as e:
+        fhttp.ledStart()
+        fhttp.saveError(e, False)
