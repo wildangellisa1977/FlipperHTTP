@@ -27,7 +27,7 @@ You are all set. Here's the initial WiFi Devboard guide: [https://www.youtube.co
 
 ## Raspberry Pi Pico W Installation (MicroPython)
 
-1. Download the `main.py` and `FlipperHTTPPico.py` files.
+1. Download the `main.py`, `urequests_2.py`, and `FlipperHTTPPico.py` files.
 2. Press and hold the `BOOT` button on your Pico W for 2 seconds.
 3. While holding the `BOOT` button, connect the Pico W to your computer using a USB cable.
 4. The Pico W should appear as a storage device on your computer.
@@ -42,7 +42,7 @@ You are all set. Here's the initial WiFi Devboard guide: [https://www.youtube.co
 8. Add the Files:
     - Click `Load`, then `This computer`, and select the `FlipperHTTPPico.py` file you downloaded earlier.
     - Go to the `File` menu, select `Save copy`, then choose `Raspberry Pi Pico`. Name the file `FlipperHTTPPico.py` and click `OK`.
-    - Repeat the steps above for `main.py`, saving it to the Raspberry Pi Pico with the name `main.py`.
+    - Repeat the steps above for `main.py` and `urequests_2.py`, saving it to the Raspberry Pi Pico with the name `main.py`.
 
 You're all set! When you reboot your Pico W, it will run the FlipperHTTP Flash.
 
