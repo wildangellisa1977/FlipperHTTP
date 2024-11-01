@@ -3,21 +3,28 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over serial.
 Created: 2024-10-30
-Updated: 2024-10-30
+Updated: 2024-11-01
 
 Change Log:
 - 2024-10-30: Initial commit
+- 2024-11-01:
+    - Added HTTP/1.1 support
+    - Improved handling of bytes in buffers
+    - Implemented additional error handling
 """
 
 from machine import UART, Pin
 import network
-import urequests as requests
+
+# import urequests as requests2
 import ujson
 from time import sleep, ticks_ms
 import errno
+import urequests_2 as requests  # for HTTP/1.1 support
 
 led = Pin("LED", Pin.OUT)  # LED on the Pico W
 BAUD_RATE = 115200
+BUFFER_SIZE = 2048
 
 
 class FlipperHTTP:
@@ -74,6 +81,11 @@ class FlipperHTTP:
     def ledStatus(self) -> None:
         if self.use_led:
             led.on()
+
+    def clearSerialBuffer(self) -> None:
+        """Clear the serial buffer"""
+        while self.uart.any() > 0:
+            self.uart.read()
 
     def connectToWiFi(self) -> bool:
         if self.ssid is None or self.password is None:
@@ -195,10 +207,15 @@ class FlipperHTTP:
     def get(self, url, headers=None) -> Response:
         if not self.isConnectedToWiFi() and not self.connectToWiFi():
             return None
-        return requests.get(url=url, headers=headers)
+        if headers:
+            return requests.get(url=url, headers=headers)
+        else:
+            return requests.get(url=url)
 
     def post(self, url, data, headers=None) -> Response:
         if not self.isConnectedToWiFi() and not self.connectToWiFi():
+            return None
+        if data is None:
             return None
         if isinstance(data, (str, bytes)):
             return requests.post(url, headers=headers, data=data)
@@ -206,6 +223,8 @@ class FlipperHTTP:
 
     def put(self, url, data, headers=None) -> Response:
         if not self.isConnectedToWiFi() and not self.connectToWiFi():
+            return None
+        if data is None:
             return None
         if isinstance(data, (str, bytes)):
             return requests.put(url, headers=headers, data=data)
@@ -219,12 +238,16 @@ class FlipperHTTP:
     def head(self, url, data, headers=None) -> Response:
         if not self.isConnectedToWiFi() and not self.connectToWiFi():
             return None
+        if data is None:
+            return None
         if isinstance(data, (str, bytes)):
             return requests.head(url, headers=headers, data=data)
         return requests.head(url, headers=headers, data=ujson.dumps(data))
 
     def patch(self, url, data, headers=None) -> Response:
         if not self.isConnectedToWiFi() and not self.connectToWiFi():
+            return None
+        if data is None:
             return None
         if isinstance(data, (str, bytes)):
             return requests.patch(url, headers=headers, data=data)
@@ -380,6 +403,8 @@ class FlipperHTTP:
                     headers = data["headers"]
                     if not url:
                         self.println("[ERROR] JSON does not contain url.")
+                        led.off()
+                        return  # Exit the handler if URL is missing
                     if not headers:
                         headers = None
                     res = self.get(data["url"], data["headers"])
@@ -403,6 +428,8 @@ class FlipperHTTP:
                     payload = data["payload"]
                     if not url or not payload:
                         self.println("[ERROR] JSON does not contain url or payload.")
+                        led.off()
+                        return  # Exit the handler if URL is missing
                     if not headers:
                         headers = None
                     res = self.post(url, payload, headers)
@@ -426,6 +453,8 @@ class FlipperHTTP:
                     payload = data["payload"]
                     if not url or not payload:
                         self.println("[ERROR] JSON does not contain url or payload.")
+                        led.off()
+                        return  # Exit the handler if URL is missing
                     if not headers:
                         headers = None
                     res = self.put(url, payload, headers)
@@ -448,6 +477,8 @@ class FlipperHTTP:
                     headers = data["headers"]
                     if not url:
                         self.println("[ERROR] JSON does not contain url.")
+                        led.off()
+                        return  # Exit the handler if URL is missing
                     if not headers:
                         headers = None
                     res = self.delete(url, headers)
@@ -463,45 +494,133 @@ class FlipperHTTP:
 
                 # Handle [GET/BYTES] command
                 elif data.startswith("[GET/BYTES]"):
-                    # Extract the JSON by removing the command part
-                    json_data = data.replace("[GET/BYTES]", "")
-                    data = ujson.loads(json_data)
-                    url = data["url"]
-                    headers = data["headers"]
-                    if not url:
-                        self.println("[ERROR] JSON does not contain url.")
-                    if not headers:
-                        headers = None
-                    res = self.get(url, headers)
-                    if res is not None:
-                        self.println("[GET/SUCCESS] GET request successful.")
-                        self.write(res.content)
-                        self.uart.flush()
-                        self.println("[GET/END]")
-                    else:
+                    try:
+                        # Extract the JSON by removing the command part
+                        json_data = data.replace("[GET/BYTES]", "")
+                        data = ujson.loads(json_data)
+
+                        url = data["url"]
+                        headers = data.get(
+                            "headers",
+                            {
+                                "Content-Type": "application/octet-stream",
+                                "User-Agent": "curl/7.84.0",  # Mimic curl User-Agent
+                            },
+                        )
+
+                        if not url:
+                            self.println("[ERROR] JSON does not contain url.")
+                            led.off()
+                            return  # Exit the handler if URL is missing
+
+                        # Make the GET request
+                        res = self.get(url, headers)
+
+                        if res is not None:
+                            if res.status_code >= 400:
+                                self.println(
+                                    f"[ERROR] GET request failed: {res.status_code}"
+                                )
+                                led.off()
+                                return
+
+                            self.println("[GET/SUCCESS] GET request successful.")
+
+                            # Initialize a buffer
+                            buffer = bytearray(BUFFER_SIZE)
+
+                            # Read and write the response in chunks until no more data is left
+                            while True:
+                                bytes_read = res.raw.readinto(buffer)
+                                if bytes_read is None:
+                                    # In some implementations, readinto might return None; handle gracefully
+                                    break
+                                if bytes_read == 0:
+                                    # No more data to read
+                                    break
+                                # Write the chunk to UART
+                                self.write(buffer[:bytes_read])
+                                self.uart.flush()
+
+                            self.println("")
+                            self.println("[GET/END]")
+                            res.close()  # Ensure the response is closed
+                        else:
+                            self.println(
+                                "[ERROR] GET request failed or returned empty data."
+                            )
+
+                    except (ValueError, KeyError) as e:
+                        self.println(f"[ERROR] Failed to parse JSON: {e}")
+                    except Exception as e:
+                        self.saveError(e)
                         self.println(
-                            "[ERROR] GET request failed or returned empty data."
+                            "[ERROR] POST request failed or returned empty data."
                         )
 
                 # Handle [POST/BYTES] command
                 elif data.startswith("[POST/BYTES]"):
-                    # Extract the JSON by removing the command part
-                    json_data = data.replace("[POST/BYTES]", "")
-                    data = ujson.loads(json_data)
-                    url = data["url"]
-                    headers = data["headers"]
-                    payload = data["payload"]
-                    if not url or not payload:
-                        self.println("[ERROR] JSON does not contain url or payload.")
-                    if not headers:
-                        headers = None
-                    res = self.post(url, payload, headers)
-                    if res is not None:
-                        self.println("[POST/SUCCESS] POST request successful.")
-                        self.uart.write(res.content)
-                        self.uart.flush()
-                        self.println("[POST/END]")
-                    else:
+                    try:
+                        # Extract the JSON by removing the command part
+                        json_data = data.replace("[POST/BYTES]", "")
+                        data = ujson.loads(json_data)
+
+                        url = data["url"]
+                        headers = data["headers"]
+                        payload = data["payload"]
+
+                        if not url or payload is None:
+                            self.println(
+                                "[ERROR] JSON does not contain url or payload."
+                            )
+                            led.off()
+                            return  # Exit the handler if URL or payload is missing
+
+                        if not headers:
+                            headers = None
+
+                        # Make the POST request
+                        res = self.post(url, payload, headers)
+
+                        if res is not None:
+
+                            if res.status_code >= 400:
+                                self.println(
+                                    f"[ERROR] GET request failed: {res.status_code}"
+                                )
+                                led.off()
+                                return
+
+                            self.println("[POST/SUCCESS] POST request successful.")
+
+                            # Initialize a buffer
+                            buffer = bytearray(BUFFER_SIZE)
+
+                            # Read and write the response in chunks until no more data is left
+                            while True:
+                                bytes_read = res.raw.readinto(buffer)
+                                if bytes_read is None:
+                                    # Handle if readinto returns None
+                                    break
+                                if bytes_read == 0:
+                                    # No more data to read
+                                    break
+                                # Write the chunk to UART
+                                self.uart.write(buffer[:bytes_read])
+                                self.uart.flush()
+
+                            self.println("")
+                            self.println("[POST/END]")
+                            res.close()  # Ensure the response is closed
+                        else:
+                            self.println(
+                                "[ERROR] POST request failed or returned empty data."
+                            )
+
+                    except (ValueError, KeyError) as e:
+                        self.println(f"[ERROR] Failed to parse JSON: {e}")
+                    except Exception as e:
+                        self.saveError(e)
                         self.println(
                             "[ERROR] POST request failed or returned empty data."
                         )
@@ -515,6 +634,8 @@ class FlipperHTTP:
                     key = data["key"]
                     if not json or not key:
                         self.println("[ERROR] JSON does not contain key or json.")
+                        led.off()
+                        return
                     res = ujson.loads(json)
                     if res is not None:
                         found_key = res.get(key)
@@ -537,6 +658,8 @@ class FlipperHTTP:
                         self.println(
                             "[ERROR] JSON does not contain key, index or json."
                         )
+                        led.off()
+                        return
                     res = ujson.loads(json)
                     if res is not None:
                         found_key = res.get(key)
