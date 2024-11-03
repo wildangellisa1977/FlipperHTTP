@@ -25,6 +25,13 @@ Star the repository and [follow me](https://www.github.com/jblanked) for updates
 
 You are all set. Here's the initial WiFi Devboard guide: [https://www.youtube.com/watch?v=AZfbrLKJMpM](https://www.youtube.com/watch?v=AZfbrLKJMpM)
 
+## Raspberry Pi Pico W Installation (C++)
+
+1. Download the `flipper_http_pico_c++.uf2` file.
+2. Press and hold the `BOOT` button on your Pico W for 2 seconds.
+3. While holding the `BOOT` button, connect the Pico W to your computer using a USB cable.
+4. Drag and drop the downloaded file onto the device. It will automatically reboot and begin running the FlipperHTTP firmware.
+
 ## Raspberry Pi Pico W Installation (MicroPython)
 
 1. Download the `main.py`, `urequests_2.py`, and `FlipperHTTPPico.py` files.
@@ -45,13 +52,6 @@ You are all set. Here's the initial WiFi Devboard guide: [https://www.youtube.co
     - Repeat the steps above for `main.py` and `urequests_2.py`, saving it to the Raspberry Pi Pico with the name `main.py`.
 
 You're all set! When you reboot your Pico W, it will run the FlipperHTTP Flash.
-
-## Raspberry Pi Pico W Installation (C++)
-
-1. Download the `flipper_http_pico_c++.uf2` file.
-2. Press and hold the `BOOT` button on your Pico W for 2 seconds.
-3. While holding the `BOOT` button, connect the Pico W to your computer using a USB cable.
-4. Drag and drop the downloaded file onto the device. It will automatically reboot and begin running the FlipperHTTP firmware.
 
 ## Apps That Utilize FlipperHTTP
 The following apps have integrated FlipperHTTP to enhance their functionalities:
