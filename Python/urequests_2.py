@@ -5,45 +5,64 @@
 # `s.write(b"%s /%s HTTP/1.0\r\n" % (method, path))` changed to `s.write(b"%s /%s HTTP/1.1\r\n" % (method, path))`
 # from https://github.com/AccelerationConsortium/ac-microcourses/blob/main/docs/courses/hello-world/urequests_2.py
 import usocket
+import ujson
+import ssl
 
 
 class Response:
-    def __init__(self, f):
-        self.raw = f
+    def __init__(self, body):
+        self.content = body
         self.encoding = "utf-8"
-        self._cached = None
+        self.text = str(self.content, self.encoding)
+        self._json = None
+        self.status_code = None
+        self.reason = ""
+        self.headers = {}
 
     def close(self):
-        if self.raw:
-            self.raw.close()
-            self.raw = None
-        self._cached = None
-
-    @property
-    def content(self):
-        if self._cached is None:
-            try:
-                self._cached = self.raw.read()
-            finally:
-                self.raw.close()
-                self.raw = None
-        return self._cached
-
-    @property
-    def text(self):
-        return str(self.content, self.encoding)
+        self.content = None
+        self.text = None
+        self._json = None
 
     def json(self):
-        import ujson
+        if self._json is None:
+            self._json = ujson.loads(self.content)
+        return self._json
 
-        return ujson.loads(self.content)
+
+def read_chunked(s):
+    body = b""
+    while True:
+        # Read the chunk size line
+        line = s.readline()
+        if not line:
+            break
+        # Remove any CRLF and convert from hex
+        chunk_size_str = line.strip().split(b";")[0]  # Ignore chunk extensions
+        try:
+            chunk_size = int(chunk_size_str, 16)
+        except ValueError:
+            raise ValueError("Invalid chunk size: %s" % chunk_size_str)
+        if chunk_size == 0:
+            # Read and discard trailer headers
+            while True:
+                trailer = s.readline()
+                if not trailer or trailer == b"\r\n":
+                    break
+            break
+        # Read the chunk data
+        chunk = s.read(chunk_size)
+        body += chunk
+        # Read the trailing CRLF after the chunk
+        s.read(2)
+    return body
 
 
 def request(
     method,
     url,
     data=None,
-    json=None,
+    json_data=None,
     headers={},
     stream=None,
     auth=None,
@@ -71,8 +90,6 @@ def request(
     if proto == "http:":
         port = 80
     elif proto == "https:":
-        import ssl
-
         port = 443
     else:
         raise ValueError("Unsupported protocol: " + proto)
@@ -84,16 +101,19 @@ def request(
     ai = usocket.getaddrinfo(host, port, 0, usocket.SOCK_STREAM)
     ai = ai[0]
 
-    resp_d = None
-    if parse_headers is not False:
-        resp_d = {}
+    resp_d = {}
+    if parse_headers is False:
+        resp_d = None
 
     s = usocket.socket(ai[0], usocket.SOCK_STREAM, ai[2])
 
     if timeout is not None:
         # Note: settimeout is not supported on all platforms, will raise
         # an AttributeError if not available.
-        s.settimeout(timeout)
+        try:
+            s.settimeout(timeout)
+        except AttributeError:
+            pass
 
     try:
         s.connect(ai[-1])
@@ -108,11 +128,9 @@ def request(
             s.write(b": ")
             s.write(headers[k])
             s.write(b"\r\n")
-        if json is not None:
+        if json_data is not None:
             assert data is None
-            import ujson
-
-            data = ujson.dumps(json)
+            data = ujson.dumps(json_data)
             s.write(b"Content-Type: application/json\r\n")
         if data:
             if chunked_data:
@@ -130,6 +148,7 @@ def request(
             else:
                 s.write(data)
 
+        # Read the status line
         l = s.readline()
         # print(l)
         l = l.split(None, 2)
@@ -140,6 +159,8 @@ def request(
         reason = ""
         if len(l) > 2:
             reason = l[2].rstrip()
+        transfer_encoding = None
+        content_length = None
         while True:
             l = s.readline()
             if not l or l == b"\r\n":
@@ -147,7 +168,9 @@ def request(
             # print(l)
             if l.startswith(b"Transfer-Encoding:"):
                 if b"chunked" in l:
-                    raise ValueError("Unsupported " + str(l, "utf-8"))
+                    transfer_encoding = "chunked"
+            elif l.startswith(b"Content-Length:"):
+                content_length = int(l.split(b":", 1)[1].strip())
             elif l.startswith(b"Location:") and not 200 <= status <= 299:
                 if status in [301, 302, 303, 307, 308]:
                     redirect = str(l[10:-2], "utf-8")
@@ -161,23 +184,33 @@ def request(
                 resp_d[k] = v.strip()
             else:
                 parse_headers(l, resp_d)
+
+        # Read body
+        if transfer_encoding == "chunked":
+            body = read_chunked(s)
+        elif content_length is not None:
+            body = s.read(content_length)
+        else:
+            # Read until the socket is closed
+            body = s.read()
+
+        if redirect:
+            s.close()
+            if status in [301, 302, 303]:
+                return request("GET", redirect, None, None, headers, stream)
+            else:
+                return request(method, redirect, data, json_data, headers, stream)
+        else:
+            resp = Response(body)
+            resp.status_code = status
+            resp.reason = reason
+            if resp_d is not None:
+                resp.headers = resp_d
+            return resp
+
     except OSError:
         s.close()
         raise
-
-    if redirect:
-        s.close()
-        if status in [301, 302, 303]:
-            return request("GET", redirect, None, None, headers, stream)
-        else:
-            return request(method, redirect, data, json, headers, stream)
-    else:
-        resp = Response(s)
-        resp.status_code = status
-        resp.reason = reason
-        if resp_d is not None:
-            resp.headers = resp_d
-        return resp
 
 
 def head(url, **kw):

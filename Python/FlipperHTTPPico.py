@@ -3,7 +3,7 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over serial.
 Created: 2024-10-30
-Updated: 2024-11-01
+Updated: 2024-11-03
 
 Change Log:
 - 2024-10-30: Initial commit
@@ -11,12 +11,12 @@ Change Log:
     - Added HTTP/1.1 support
     - Improved handling of bytes in buffers
     - Implemented additional error handling
+- 2024-11-03:
+    - Updated requests module
 """
 
 from machine import UART, Pin
 import network
-
-# import urequests as requests2
 import ujson
 from time import sleep, ticks_ms
 import errno
@@ -36,6 +36,7 @@ class FlipperHTTP:
         self.password = None
         self.use_led = True
         self.timeout = 2000  # milliseconds
+        self.uart = None
 
     def saveError(self, err, is_os_error: bool = False) -> None:
         if not is_os_error:
@@ -151,7 +152,7 @@ class FlipperHTTP:
                 # Save updated settings to file
                 try:
                     with open("flipper-http.json", "w") as f:
-                        f.write(ujson.dumps(settings))
+                        f.write(uujson.dumps(settings))
                     self.println("[SUCCESS] Settings saved.")
                     self.ssid = new_ssid
                     self.password = new_password
@@ -201,7 +202,7 @@ class FlipperHTTP:
             return False
 
         except (OSError, ValueError) as e:
-            self.saveError("Failed to load or parse settings file: {e}")
+            self.saveError(f"Failed to load or parse settings file: {e}")
             return False
 
     def get(self, url, headers=None) -> Response:
@@ -212,46 +213,64 @@ class FlipperHTTP:
         else:
             return requests.get(url=url)
 
-    def post(self, url, data, headers=None) -> Response:
+    def post(self, url, payload, headers=None) -> Response:
         if not self.isConnectedToWiFi() and not self.connectToWiFi():
             return None
-        if data is None:
+        if payload is None:
             return None
-        if isinstance(data, (str, bytes)):
-            return requests.post(url, headers=headers, data=data)
-        return requests.post(url, headers=headers, data=ujson.dumps(data))
+        if isinstance(payload, (str, bytes)):
+            if headers:
+                return requests.post(url, headers=headers, data=payload)
+            return requests.post(url, data=payload)
+        if headers:
+            return requests.post(url, headers=headers, data=ujson.dumps(payload))
+        return requests.post(url, json_data=ujson.dumps(payload))
 
-    def put(self, url, data, headers=None) -> Response:
+    def put(self, url, payload, headers=None) -> Response:
         if not self.isConnectedToWiFi() and not self.connectToWiFi():
             return None
-        if data is None:
+        if payload is None:
             return None
-        if isinstance(data, (str, bytes)):
-            return requests.put(url, headers=headers, data=data)
-        return requests.put(url, headers=headers, data=ujson.dumps(data))
+        if isinstance(payload, (str, bytes)):
+            if headers:
+                return requests.put(url, headers=headers, data=payload)
+            return requests.put(url, data=payload)
+        if headers:
+            return requests.put(url, headers=headers, json_data=ujson.dumps(payload))
+        return requests.put(url, json_data=ujson.dumps(payload))
 
     def delete(self, url, headers=None) -> Response:
         if not self.isConnectedToWiFi() and not self.connectToWiFi():
             return None
-        return requests.delete(url, headers=headers)
+        if headers:
+            return requests.delete(url, headers=headers)
+        return requests.delete(url)
 
-    def head(self, url, data, headers=None) -> Response:
+    def head(self, url, payload, headers=None) -> Response:
         if not self.isConnectedToWiFi() and not self.connectToWiFi():
             return None
-        if data is None:
+        if payload is None:
             return None
-        if isinstance(data, (str, bytes)):
-            return requests.head(url, headers=headers, data=data)
-        return requests.head(url, headers=headers, data=ujson.dumps(data))
+        if isinstance(payload, (str, bytes)):
+            if headers:
+                return requests.head(url, headers=headers, data=payload)
+            return requests.head(url, data=payload)
+        if headers:
+            return requests.head(url, headers=headers, json_data=ujson.dumps(payload))
+        return requests.head(url, json_data=ujson.dumps(payload))
 
-    def patch(self, url, data, headers=None) -> Response:
+    def patch(self, url, payload, headers=None) -> Response:
         if not self.isConnectedToWiFi() and not self.connectToWiFi():
             return None
-        if data is None:
+        if payload is None:
             return None
-        if isinstance(data, (str, bytes)):
-            return requests.patch(url, headers=headers, data=data)
-        return requests.patch(url, headers=headers, data=ujson.dumps(data))
+        if isinstance(payload, (str, bytes)):
+            if headers:
+                return requests.patch(url, headers=headers, data=payload)
+            return requests.patch(url, data=payload)
+        if headers:
+            return requests.patch(url, headers=headers, json_data=ujson.dumps(payload))
+        return requests.patch(url, json_data=ujson.dumps(payload))
 
     def write(self, message: bytes):
         self.uart.write(message)
