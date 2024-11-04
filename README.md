@@ -3,6 +3,17 @@ HTTP library for Flipper Zero. Compatible with Wifi Dev Board for Flipper Zero (
 
 Star the repository and [follow me](https://www.github.com/jblanked) for updates and upcoming Flipper apps.
 
+## Apps That Utilize FlipperHTTP
+The following apps have integrated FlipperHTTP to enhance their functionalities:
+
+- **FlipStore** - A marketplace for downloading and managing apps and software on your Flipper Zero: https://github.com/jblanked/FlipStore
+- **FlipSocial** - Social media platform for the Flipper Zero: https://github.com/jblanked/FlipSocial
+- **FlipLibrary** - A Flipper Zero app with a dictionary, random facts, and more: https://github.com/jblanked/FlipLibrary
+- **Web Crawler** - Allows your Flipper Zero to crawl and interact with websites directly: https://github.com/jblanked/WebCrawler-FlipperZero
+- **FlipWeather** - Use WiFi to get GPS and Weather information on your Flipper Zero: https://github.com/jblanked/FlipWeather
+- **FlipTrader** - Use WiFi to get the price of stocks and currency pairs on your Flipper Zero: https://github.com/jblanked/FlipTrader
+- **FlipWiFi** - FlipperHTTP companion app. Scan and save WiFi networks on your Flipper Zero: https://github.com/jblanked/FlipWiFi
+
 ## WiFi Devboard Installation
 1. Download the `flipper_http_bootloader.bin`, `flipper_http_firmware_a.bin`, and `flipper_http_partitions.bin` files.
 2. Unplug your Wifi Dev Board and connect your Flipper Zero to your computer.
@@ -52,17 +63,6 @@ You are all set. Here's the initial WiFi Devboard guide: [https://www.youtube.co
     - Repeat the steps above for `main.py` and `urequests_2.py`, saving it to the Raspberry Pi Pico with the name `main.py`.
 
 You're all set! When you reboot your Pico W, it will run the FlipperHTTP Flash.
-
-## Apps That Utilize FlipperHTTP
-The following apps have integrated FlipperHTTP to enhance their functionalities:
-
-- **FlipStore** - A marketplace for downloading and managing apps and software on your Flipper Zero: https://github.com/jblanked/FlipStore
-- **FlipSocial** - Social media platform for the Flipper Zero: https://github.com/jblanked/FlipSocial
-- **FlipLibrary** - A Flipper Zero app with a dictionary, random facts, and more: https://github.com/jblanked/FlipLibrary
-- **Web Crawler** - Allows your Flipper Zero to crawl and interact with websites directly: https://github.com/jblanked/WebCrawler-FlipperZero
-- **FlipWeather** - Use WiFi to get GPS and Weather information on your Flipper Zero: https://github.com/jblanked/FlipWeather
-- **FlipTrader** - Use WiFi to get the price of stocks and currency pairs on your Flipper Zero: https://github.com/jblanked/FlipTrader
-- **FlipWiFi** - FlipperHTTP companion app. Scan and save WiFi networks on your Flipper Zero: https://github.com/jblanked/FlipWiFi
 
 
 ## Usage in `C` (flipper_http.h)
