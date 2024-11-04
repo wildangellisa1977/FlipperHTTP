@@ -152,7 +152,7 @@ class FlipperHTTP:
                 # Save updated settings to file
                 try:
                     with open("flipper-http.json", "w") as f:
-                        f.write(uujson.dumps(settings))
+                        f.write(ujson.dumps(settings))
                     self.println("[SUCCESS] Settings saved.")
                     self.ssid = new_ssid
                     self.password = new_password
