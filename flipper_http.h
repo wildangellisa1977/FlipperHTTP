@@ -133,7 +133,7 @@ static char rx_line_buffer[RX_LINE_BUFFER_SIZE];
 #define FILE_BUFFER_SIZE 512
 static uint8_t file_buffer[FILE_BUFFER_SIZE];
 
-// fhttp.last_response holds the last received data from the UART, which could be [GET/END], [POST/END], [PUT/END], [DELETE/END], etc
+// fhttp.last_response holds the last received data from the UART
 
 // Function to append received data to file
 // make sure to initialize the file path before calling this function
