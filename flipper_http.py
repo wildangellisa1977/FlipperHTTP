@@ -279,32 +279,3 @@ def flipper_http_delete_request_with_headers(url: str, headers: str, data: str):
         return data
     clear_buffer()
     return ""
-
-
-# Example of how to use the functions
-""" uncomment to run the example
-flipper_print("Starting HTTP example")
-clear_buffer()  # Clear the buffer before starting
-time.sleep(1)
-if flipper_http_ping() and flipper_http_save_wifi("JBlanked", "maingirl"):
-    flipper_print("WiFi saved successfully!")
-    time.sleep(2)
-    if flipper_http_connect_wifi():
-        flipper_print("WiFi connected successfully!")
-        time.sleep(2)
-        flipper_print(
-            flipper_http_get_request_with_headers(
-                "https://httpbin.org/get", "{Content-Type: application/json}"
-            )
-        )
-        time.sleep(2)
-
-        if flipper_http_disconnect_wifi():
-            flipper_print("WiFi disconnected successfully!")
-            time.sleep(2)
-else:
-    flipper_print("Failed to save WiFi credentials")
-    time.sleep(2)
-    flipper_print("Exiting...")
-    time.sleep(2)
-"""  # uncomment to run the example

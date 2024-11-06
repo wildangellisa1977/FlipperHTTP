@@ -247,7 +247,7 @@ FuriString *flipper_http_load_from_file(char *file_path)
         storage_file_close(file);
         storage_file_free(file);
         furi_record_close(RECORD_STORAGE);
-        return false;
+        return NULL;
     }
 
     // Append each byte to the FuriString
@@ -330,8 +330,6 @@ static int32_t flipper_http_worker(void *context)
 
                         // Invoke the callback with the complete line
                         fhttp.handle_rx_line_cb(rx_line_buffer, fhttp.callback_context);
-
-                        // save the received data
 
                         // Reset the line buffer position
                         rx_line_pos = 0;
