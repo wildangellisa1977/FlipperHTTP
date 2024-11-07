@@ -3,7 +3,7 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over serial.
 Created: 2024-10-30
-Updated: 2024-11-03
+Updated: 2024-11-07
 
 Change Log:
 - 2024-10-30: Initial commit
@@ -11,8 +11,8 @@ Change Log:
     - Added HTTP/1.1 support
     - Improved handling of bytes in buffers
     - Implemented additional error handling
-- 2024-11-03:
-    - Updated requests module
+- 2024-11-03: Updated requests module
+- 2024-11-07: Added garbage collection to free up memory and try-except block to handle exceptions
 """
 
 from machine import UART, Pin
@@ -21,6 +21,7 @@ import ujson
 from time import sleep, ticks_ms
 import errno
 import urequests_2 as requests  # for HTTP/1.1 support
+import gc
 
 led = Pin("LED", Pin.OUT)  # LED on the Pico W
 BAUD_RATE = 115200
@@ -313,380 +314,395 @@ class FlipperHTTP:
     def loop(self):
         """Main loop to handle the serial communication"""
         while True:
-            if self.uart.any() > 0:
-                data = self.readLine()
+            gc.collect()  # Run garbage collection to free up memory
+            try:
+                if self.uart.any() > 0:
+                    data = self.readLine()
 
-                self.ledStatus()
+                    self.ledStatus()
 
-                if not data:  # Checks for None or empty string
-                    led.off()
-                    continue
-
-                if data.startswith("[LIST]"):
-                    self.println(
-                        "[LIST],[PING], [REBOOT], [WIFI/IP], [WIFI/SCAN], [WIFI/SAVE], [WIFI/CONNECT], [WIFI/DISCONNECT], [WIFI/LIST], [GET], [GET/HTTP], [POST/HTTP], [PUT/HTTP], [DELETE/HTTP], [GET/BYTES], [POST/BYTES], [PARSE], [PARSE/ARRAY], [LED/ON], [LED/OFF], [IP/ADDRESS]"
-                    )
-
-                # handle [LED/ON] command
-                elif data.startswith("[LED/ON]"):
-                    self.use_led = True
-
-                # handle [LED/OFF] command
-                elif data.startswith("[LED/OFF]"):
-                    self.use_led = False
-
-                # handle [IP/ADDRESS] command (local IP)
-                elif data.startswith("[IP/ADDRESS]"):
-                    self.println(self.local_ip)
-
-                # handle [WIFI/IP] command (wifi IP)
-                elif data.startswith("[WIFI/IP]"):
-                    res = self.get("https://ipwhois.app/json/")
-                    if res is not None:
-                        self.wifi_ip = res.json()["ip"]
-                        self.println(self.wifi_ip)
-                    else:
-                        self.println(
-                            "[ERROR] GET request failed or returned empty data."
-                        )
-
-                # Ping/Pong to see if board/flipper is connected
-                elif data.startswith("[PING]"):
-                    self.println("[PONG]")
-
-                # Handle [REBOOT] command
-                elif data.startswith("[REBOOT]"):
-                    machine.reset()
-                    pass
-
-                # scan for wifi networks
-                elif data.startswith("[WIFI/SCAN]"):
-                    try:
-                        ap = network.WLAN(network.AP_IF)
-                        ap.active(True)
-                        networks = ap.scan()
-                        network_data = []
-                        for w in networks:
-                            network_data.append(w[0].decode())
-                        self.println(str(network_data))
-                        ap.active(False)
-                    except Exception as e:
-                        pass
-
-                # Handle [WIFI/SAVE] command
-                elif data.startswith("[WIFI/SAVE]"):
-                    # Extract the JSON by removing the command part
-                    json_data = data.replace("[WIFI/SAVE]", "")
-                    if self.saveWifiSettings(json_data):
-                        self.println("[SUCCESS] Saved WiFi settings.")
-                    else:
-                        self.println("[ERROR] Failed to save WiFi settings.")
-
-                # Handle [WIFI/CONNECT] command
-                elif data.startswith("[WIFI/CONNECT]"):
-                    if not self.isConnectedToWiFi():
-                        self.connectToWiFi()
-                        if self.isConnectedToWiFi():
-                            self.println("[SUCCESS] Connected to WiFi")
-                        else:
-                            self.println("[ERROR] Failed to connect to Wifi.")
-                    else:
-                        self.println("[INFO] Already connected to WiFi")
-
-                # Handle [WIFI/DISCONNECT] command
-                elif data.startswith("[WIFI/DISCONNECT]"):
-                    self.wlan.disconnect()
-                    self.println("[DISCONNECTED] Wifi has been disconnected.")
-
-                # Handle [GET] command
-                elif data.startswith("[GET]"):
-                    # Extract URL by removing the command part
-                    url = data.replace("[GET]", "")
-                    res = self.get(url)
-                    if res is not None:
-                        self.println("[GET/SUCCESS] GET request successful.")
-                        self.println(res.text)
-                        self.uart.flush()
-                        self.println("[GET/END]")
-                    else:
-                        self.println(
-                            "[ERROR] GET request failed or returned empty data."
-                        )
-
-                # Handle [GET/HTTP] command
-                elif data.startswith("[GET/HTTP]"):
-                    # Extract the JSON by removing the command part
-                    json_data = data.replace("[GET/HTTP]", "")
-                    data = ujson.loads(json_data)
-                    url = data["url"]
-                    headers = data["headers"]
-                    if not url:
-                        self.println("[ERROR] JSON does not contain url.")
+                    if not data:  # Checks for None or empty string
                         led.off()
-                        return  # Exit the handler if URL is missing
-                    if not headers:
-                        headers = None
-                    res = self.get(data["url"], data["headers"])
-                    if res is not None:
-                        self.println("[GET/SUCCESS] GET request successful.")
-                        self.println(res.text)
-                        self.uart.flush()
-                        self.println("[GET/END]")
-                    else:
+                        continue
+
+                    if data.startswith("[LIST]"):
                         self.println(
-                            "[ERROR] GET request failed or returned empty data."
+                            "[LIST],[PING], [REBOOT], [WIFI/IP], [WIFI/SCAN], [WIFI/SAVE], [WIFI/CONNECT], [WIFI/DISCONNECT], [WIFI/LIST], [GET], [GET/HTTP], [POST/HTTP], [PUT/HTTP], [DELETE/HTTP], [GET/BYTES], [POST/BYTES], [PARSE], [PARSE/ARRAY], [LED/ON], [LED/OFF], [IP/ADDRESS]"
                         )
 
-                # Handle [POST/HTTP] command
-                elif data.startswith("[POST/HTTP]"):
-                    # Extract the JSON by removing the command part
-                    json_data = data.replace("[POST/HTTP]", "")
-                    data = ujson.loads(json_data)
-                    url = data["url"]
-                    headers = data["headers"]
-                    payload = data["payload"]
-                    if not url or not payload:
-                        self.println("[ERROR] JSON does not contain url or payload.")
-                        led.off()
-                        return  # Exit the handler if URL is missing
-                    if not headers:
-                        headers = None
-                    res = self.post(url, payload, headers)
-                    if res is not None:
-                        self.println("[POST/SUCCESS] POST request successful.")
-                        self.println(res.text)
-                        self.uart.flush()
-                        self.println("[POST/END]")
-                    else:
-                        self.println(
-                            "[ERROR] POST request failed or returned empty data."
-                        )
+                    # handle [LED/ON] command
+                    elif data.startswith("[LED/ON]"):
+                        self.use_led = True
 
-                # Handle [PUT/HTTP] command
-                elif data.startswith("[PUT/HTTP]"):
-                    # Extract the JSON by removing the command part
-                    json_data = data.replace("[PUT/HTTP]", "")
-                    data = ujson.loads(json_data)
-                    url = data["url"]
-                    headers = data["headers"]
-                    payload = data["payload"]
-                    if not url or not payload:
-                        self.println("[ERROR] JSON does not contain url or payload.")
-                        led.off()
-                        return  # Exit the handler if URL is missing
-                    if not headers:
-                        headers = None
-                    res = self.put(url, payload, headers)
-                    if res is not None:
-                        self.println("[PUT/SUCCESS] PUT request successful.")
-                        self.println(res.text)
-                        self.uart.flush()
-                        self.println("[PUT/END]")
-                    else:
-                        self.println(
-                            "[ERROR] PUT request failed or returned empty data."
-                        )
+                    # handle [LED/OFF] command
+                    elif data.startswith("[LED/OFF]"):
+                        self.use_led = False
 
-                # Handle [DELETE/HTTP] command
-                elif data.startswith("[DELETE/HTTP]"):
-                    # Extract the JSON by removing the command part
-                    json_data = data.replace("[DELETE/HTTP]", "")
-                    data = ujson.loads(json_data)
-                    url = data["url"]
-                    headers = data["headers"]
-                    if not url:
-                        self.println("[ERROR] JSON does not contain url.")
-                        led.off()
-                        return  # Exit the handler if URL is missing
-                    if not headers:
-                        headers = None
-                    res = self.delete(url, headers)
-                    if res is not None:
-                        self.println("[DELETE/SUCCESS] DELETE request successful.")
-                        self.println(res.text)
-                        self.uart.flush()
-                        self.println("[DELETE/END]")
-                    else:
-                        self.println(
-                            "[ERROR] DELETE request failed or returned empty data."
-                        )
+                    # handle [IP/ADDRESS] command (local IP)
+                    elif data.startswith("[IP/ADDRESS]"):
+                        self.println(self.local_ip)
 
-                # Handle [GET/BYTES] command
-                elif data.startswith("[GET/BYTES]"):
-                    try:
-                        # Extract the JSON by removing the command part
-                        json_data = data.replace("[GET/BYTES]", "")
-                        data = ujson.loads(json_data)
-
-                        url = data["url"]
-                        headers = data.get(
-                            "headers",
-                            {
-                                "Content-Type": "application/octet-stream",
-                                "User-Agent": "curl/7.84.0",  # Mimic curl User-Agent
-                            },
-                        )
-
-                        if not url:
-                            self.println("[ERROR] JSON does not contain url.")
-                            led.off()
-                            return  # Exit the handler if URL is missing
-
-                        # Make the GET request
-                        res = self.get(url, headers)
-
+                    # handle [WIFI/IP] command (wifi IP)
+                    elif data.startswith("[WIFI/IP]"):
+                        res = self.get("https://ipwhois.app/json/")
                         if res is not None:
-                            if res.status_code >= 400:
-                                self.println(
-                                    f"[ERROR] GET request failed: {res.status_code}"
-                                )
-                                led.off()
-                                return
-
-                            self.println("[GET/SUCCESS] GET request successful.")
-
-                            # Initialize a buffer
-                            buffer = bytearray(BUFFER_SIZE)
-
-                            # Read and write the response in chunks until no more data is left
-                            while True:
-                                bytes_read = res.raw.readinto(buffer)
-                                if bytes_read is None:
-                                    # In some implementations, readinto might return None; handle gracefully
-                                    break
-                                if bytes_read == 0:
-                                    # No more data to read
-                                    break
-                                # Write the chunk to UART
-                                self.write(buffer[:bytes_read])
-                                self.uart.flush()
-
-                            self.println("")
-                            self.println("[GET/END]")
-                            res.close()  # Ensure the response is closed
+                            self.wifi_ip = res.json()["ip"]
+                            self.println(self.wifi_ip)
                         else:
                             self.println(
                                 "[ERROR] GET request failed or returned empty data."
                             )
 
-                    except (ValueError, KeyError) as e:
-                        self.println(f"[ERROR] Failed to parse JSON: {e}")
-                    except Exception as e:
-                        self.saveError(e)
-                        self.println(
-                            "[ERROR] POST request failed or returned empty data."
-                        )
+                    # Ping/Pong to see if board/flipper is connected
+                    elif data.startswith("[PING]"):
+                        self.println("[PONG]")
 
-                # Handle [POST/BYTES] command
-                elif data.startswith("[POST/BYTES]"):
-                    try:
+                    # Handle [REBOOT] command
+                    elif data.startswith("[REBOOT]"):
+                        machine.reset()
+                        pass
+
+                    # scan for wifi networks
+                    elif data.startswith("[WIFI/SCAN]"):
+                        try:
+                            ap = network.WLAN(network.AP_IF)
+                            ap.active(True)
+                            networks = ap.scan()
+                            network_data = []
+                            for w in networks:
+                                network_data.append(w[0].decode())
+                            self.println(str(network_data))
+                            ap.active(False)
+                        except Exception as e:
+                            pass
+
+                    # Handle [WIFI/SAVE] command
+                    elif data.startswith("[WIFI/SAVE]"):
                         # Extract the JSON by removing the command part
-                        json_data = data.replace("[POST/BYTES]", "")
-                        data = ujson.loads(json_data)
+                        json_data = data.replace("[WIFI/SAVE]", "")
+                        if self.saveWifiSettings(json_data):
+                            self.println("[SUCCESS] Saved WiFi settings.")
+                        else:
+                            self.println("[ERROR] Failed to save WiFi settings.")
 
+                    # Handle [WIFI/CONNECT] command
+                    elif data.startswith("[WIFI/CONNECT]"):
+                        if not self.isConnectedToWiFi():
+                            self.connectToWiFi()
+                            if self.isConnectedToWiFi():
+                                self.println("[SUCCESS] Connected to WiFi")
+                            else:
+                                self.println("[ERROR] Failed to connect to Wifi.")
+                        else:
+                            self.println("[INFO] Already connected to WiFi")
+
+                    # Handle [WIFI/DISCONNECT] command
+                    elif data.startswith("[WIFI/DISCONNECT]"):
+                        self.wlan.disconnect()
+                        self.println("[DISCONNECTED] Wifi has been disconnected.")
+
+                    # Handle [GET] command
+                    elif data.startswith("[GET]"):
+                        # Extract URL by removing the command part
+                        url = data.replace("[GET]", "")
+                        res = self.get(url)
+                        if res is not None:
+                            self.println("[GET/SUCCESS] GET request successful.")
+                            self.println(res.text)
+                            self.uart.flush()
+                            self.println("[GET/END]")
+                        else:
+                            self.println(
+                                "[ERROR] GET request failed or returned empty data."
+                            )
+
+                    # Handle [GET/HTTP] command
+                    elif data.startswith("[GET/HTTP]"):
+                        # Extract the JSON by removing the command part
+                        json_data = data.replace("[GET/HTTP]", "")
+                        data = ujson.loads(json_data)
+                        url = data["url"]
+                        headers = data["headers"]
+                        if not url:
+                            self.println("[ERROR] JSON does not contain url.")
+                            led.off()
+                            return  # Exit the handler if URL is missing
+                        if not headers:
+                            headers = None
+                        res = self.get(data["url"], data["headers"])
+                        if res is not None:
+                            self.println("[GET/SUCCESS] GET request successful.")
+                            self.println(res.text)
+                            self.uart.flush()
+                            self.println("[GET/END]")
+                        else:
+                            self.println(
+                                "[ERROR] GET request failed or returned empty data."
+                            )
+
+                    # Handle [POST/HTTP] command
+                    elif data.startswith("[POST/HTTP]"):
+                        # Extract the JSON by removing the command part
+                        json_data = data.replace("[POST/HTTP]", "")
+                        data = ujson.loads(json_data)
                         url = data["url"]
                         headers = data["headers"]
                         payload = data["payload"]
-
-                        if not url or payload is None:
+                        if not url or not payload:
                             self.println(
                                 "[ERROR] JSON does not contain url or payload."
                             )
                             led.off()
-                            return  # Exit the handler if URL or payload is missing
-
+                            return  # Exit the handler if URL is missing
                         if not headers:
                             headers = None
-
-                        # Make the POST request
                         res = self.post(url, payload, headers)
-
                         if res is not None:
-
-                            if res.status_code >= 400:
-                                self.println(
-                                    f"[ERROR] GET request failed: {res.status_code}"
-                                )
-                                led.off()
-                                return
-
                             self.println("[POST/SUCCESS] POST request successful.")
-
-                            # Initialize a buffer
-                            buffer = bytearray(BUFFER_SIZE)
-
-                            # Read and write the response in chunks until no more data is left
-                            while True:
-                                bytes_read = res.raw.readinto(buffer)
-                                if bytes_read is None:
-                                    # Handle if readinto returns None
-                                    break
-                                if bytes_read == 0:
-                                    # No more data to read
-                                    break
-                                # Write the chunk to UART
-                                self.uart.write(buffer[:bytes_read])
-                                self.uart.flush()
-
-                            self.println("")
+                            self.println(res.text)
+                            self.uart.flush()
                             self.println("[POST/END]")
-                            res.close()  # Ensure the response is closed
                         else:
                             self.println(
                                 "[ERROR] POST request failed or returned empty data."
                             )
 
-                    except (ValueError, KeyError) as e:
-                        self.println(f"[ERROR] Failed to parse JSON: {e}")
-                    except Exception as e:
-                        self.saveError(e)
-                        self.println(
-                            "[ERROR] POST request failed or returned empty data."
-                        )
-
-                # Handle [PARSE] command
-                elif data.startswith("[PARSE]"):
-                    # Extract the JSON by removing the command part
-                    json_data = data.replace("[PARSE]", "")
-                    data = ujson.loads(json_data)
-                    json = data["json"]
-                    key = data["key"]
-                    if not json or not key:
-                        self.println("[ERROR] JSON does not contain key or json.")
-                        led.off()
-                        return
-                    res = ujson.loads(json)
-                    if res is not None:
-                        found_key = res.get(key)
-                        if found_key:
-                            self.println(found_key)
+                    # Handle [PUT/HTTP] command
+                    elif data.startswith("[PUT/HTTP]"):
+                        # Extract the JSON by removing the command part
+                        json_data = data.replace("[PUT/HTTP]", "")
+                        data = ujson.loads(json_data)
+                        url = data["url"]
+                        headers = data["headers"]
+                        payload = data["payload"]
+                        if not url or not payload:
+                            self.println(
+                                "[ERROR] JSON does not contain url or payload."
+                            )
+                            led.off()
+                            return  # Exit the handler if URL is missing
+                        if not headers:
+                            headers = None
+                        res = self.put(url, payload, headers)
+                        if res is not None:
+                            self.println("[PUT/SUCCESS] PUT request successful.")
+                            self.println(res.text)
+                            self.uart.flush()
+                            self.println("[PUT/END]")
                         else:
-                            self.println("[ERROR] Key not found in JSON.")
-                    else:
-                        self.println("[ERROR] JSON parsing failed or key not found.")
+                            self.println(
+                                "[ERROR] PUT request failed or returned empty data."
+                            )
 
-                # Handle [PARSE/ARRAY] command
-                elif data.startswith("[PARSE/ARRAY]"):
-                    # Extract the JSON by removing the command part
-                    json_data = data.replace("[PARSE/ARRAY]", "")
-                    data = ujson.loads(json_data)
-                    json = data["json"]
-                    key = data["key"]
-                    index = data["index"]
-                    if not json or not key or not index:
-                        self.println(
-                            "[ERROR] JSON does not contain key, index or json."
-                        )
-                        led.off()
-                        return
-                    res = ujson.loads(json)
-                    if res is not None:
-                        found_key = res.get(key)
-                        if found_key:
-                            self.println(found_key[index])
+                    # Handle [DELETE/HTTP] command
+                    elif data.startswith("[DELETE/HTTP]"):
+                        # Extract the JSON by removing the command part
+                        json_data = data.replace("[DELETE/HTTP]", "")
+                        data = ujson.loads(json_data)
+                        url = data["url"]
+                        headers = data["headers"]
+                        if not url:
+                            self.println("[ERROR] JSON does not contain url.")
+                            led.off()
+                            return  # Exit the handler if URL is missing
+                        if not headers:
+                            headers = None
+                        res = self.delete(url, headers)
+                        if res is not None:
+                            self.println("[DELETE/SUCCESS] DELETE request successful.")
+                            self.println(res.text)
+                            self.uart.flush()
+                            self.println("[DELETE/END]")
                         else:
-                            self.println("[ERROR] Key not found in JSON.")
-                    else:
-                        self.println("[ERROR] JSON parsing failed or key not found.")
+                            self.println(
+                                "[ERROR] DELETE request failed or returned empty data."
+                            )
 
+                    # Handle [GET/BYTES] command
+                    elif data.startswith("[GET/BYTES]"):
+                        try:
+                            # Extract the JSON by removing the command part
+                            json_data = data.replace("[GET/BYTES]", "")
+                            data = ujson.loads(json_data)
+
+                            url = data["url"]
+                            headers = data.get(
+                                "headers",
+                                {
+                                    "Content-Type": "application/octet-stream",
+                                    "User-Agent": "curl/7.84.0",  # Mimic curl User-Agent
+                                },
+                            )
+
+                            if not url:
+                                self.println("[ERROR] JSON does not contain url.")
+                                led.off()
+                                return  # Exit the handler if URL is missing
+
+                            # Make the GET request
+                            res = self.get(url, headers)
+
+                            if res is not None:
+                                if res.status_code >= 400:
+                                    self.println(
+                                        f"[ERROR] GET request failed: {res.status_code}"
+                                    )
+                                    led.off()
+                                    return
+
+                                self.println("[GET/SUCCESS] GET request successful.")
+
+                                # Initialize a buffer
+                                buffer = bytearray(BUFFER_SIZE)
+
+                                # Read and write the response in chunks until no more data is left
+                                while True:
+                                    bytes_read = res.raw.readinto(buffer)
+                                    if bytes_read is None:
+                                        # In some implementations, readinto might return None; handle gracefully
+                                        break
+                                    if bytes_read == 0:
+                                        # No more data to read
+                                        break
+                                    # Write the chunk to UART
+                                    self.write(buffer[:bytes_read])
+                                    self.uart.flush()
+
+                                self.println("")
+                                self.println("[GET/END]")
+                                res.close()  # Ensure the response is closed
+                            else:
+                                self.println(
+                                    "[ERROR] GET request failed or returned empty data."
+                                )
+
+                        except (ValueError, KeyError) as e:
+                            self.println(f"[ERROR] Failed to parse JSON: {e}")
+                        except Exception as e:
+                            self.saveError(e)
+                            self.println(
+                                "[ERROR] POST request failed or returned empty data."
+                            )
+
+                    # Handle [POST/BYTES] command
+                    elif data.startswith("[POST/BYTES]"):
+                        try:
+                            # Extract the JSON by removing the command part
+                            json_data = data.replace("[POST/BYTES]", "")
+                            data = ujson.loads(json_data)
+
+                            url = data["url"]
+                            headers = data["headers"]
+                            payload = data["payload"]
+
+                            if not url or payload is None:
+                                self.println(
+                                    "[ERROR] JSON does not contain url or payload."
+                                )
+                                led.off()
+                                return  # Exit the handler if URL or payload is missing
+
+                            if not headers:
+                                headers = None
+
+                            # Make the POST request
+                            res = self.post(url, payload, headers)
+
+                            if res is not None:
+
+                                if res.status_code >= 400:
+                                    self.println(
+                                        f"[ERROR] GET request failed: {res.status_code}"
+                                    )
+                                    led.off()
+                                    return
+
+                                self.println("[POST/SUCCESS] POST request successful.")
+
+                                # Initialize a buffer
+                                buffer = bytearray(BUFFER_SIZE)
+
+                                # Read and write the response in chunks until no more data is left
+                                while True:
+                                    bytes_read = res.raw.readinto(buffer)
+                                    if bytes_read is None:
+                                        # Handle if readinto returns None
+                                        break
+                                    if bytes_read == 0:
+                                        # No more data to read
+                                        break
+                                    # Write the chunk to UART
+                                    self.uart.write(buffer[:bytes_read])
+                                    self.uart.flush()
+
+                                self.println("")
+                                self.println("[POST/END]")
+                                res.close()  # Ensure the response is closed
+                            else:
+                                self.println(
+                                    "[ERROR] POST request failed or returned empty data."
+                                )
+
+                        except (ValueError, KeyError) as e:
+                            self.println(f"[ERROR] Failed to parse JSON: {e}")
+                        except Exception as e:
+                            self.saveError(e)
+                            self.println(
+                                "[ERROR] POST request failed or returned empty data."
+                            )
+
+                    # Handle [PARSE] command
+                    elif data.startswith("[PARSE]"):
+                        # Extract the JSON by removing the command part
+                        json_data = data.replace("[PARSE]", "")
+                        data = ujson.loads(json_data)
+                        json = data["json"]
+                        key = data["key"]
+                        if not json or not key:
+                            self.println("[ERROR] JSON does not contain key or json.")
+                            led.off()
+                            return
+                        res = ujson.loads(json)
+                        if res is not None:
+                            found_key = res.get(key)
+                            if found_key:
+                                self.println(found_key)
+                            else:
+                                self.println("[ERROR] Key not found in JSON.")
+                        else:
+                            self.println(
+                                "[ERROR] JSON parsing failed or key not found."
+                            )
+
+                    # Handle [PARSE/ARRAY] command
+                    elif data.startswith("[PARSE/ARRAY]"):
+                        # Extract the JSON by removing the command part
+                        json_data = data.replace("[PARSE/ARRAY]", "")
+                        data = ujson.loads(json_data)
+                        json = data["json"]
+                        key = data["key"]
+                        index = data["index"]
+                        if not json or not key or not index:
+                            self.println(
+                                "[ERROR] JSON does not contain key, index or json."
+                            )
+                            led.off()
+                            return
+                        res = ujson.loads(json)
+                        if res is not None:
+                            found_key = res.get(key)
+                            if found_key:
+                                self.println(found_key[index])
+                            else:
+                                self.println("[ERROR] Key not found in JSON.")
+                        else:
+                            self.println(
+                                "[ERROR] JSON parsing failed or key not found."
+                            )
+
+                    led.off()
+            except Exception as e:
+                self.saveError(e)
+                self.println(f"[ERROR] {e}")
                 led.off()
+                continue
