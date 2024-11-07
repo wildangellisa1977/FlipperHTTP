@@ -65,7 +65,7 @@ You are all set. Here's the initial WiFi Devboard guide: [https://www.youtube.co
 You're all set! When you reboot your Pico W, it will run the FlipperHTTP Flash.
 
 
-## Usage in `C` (flipper_http.h)
+## Usage in `C` (flipper_http.h and flipper_http.c)
 
 | **Function Name**                                | **Return Value** | **Parameters**                                                                                                | **Description**                                                                                   |
 |--------------------------------------------------|------------------|----------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
