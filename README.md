@@ -91,9 +91,8 @@ You're all set! When you reboot your Pico W, it will run the FlipperHTTP Flash.
 | `flipper_http_post_request_with_headers`         | `bool`           | `const char *url`, `const char *headers`, `const char *payload`                                                | Sends a POST request with custom headers and a payload to the specified URL.                       |
 | `flipper_http_put_request_with_headers`          | `bool`           | `const char *url`, `const char *headers`, `const char *payload`                                                | Sends a PUT request with custom headers and a payload to the specified URL.                        |
 | `flipper_http_delete_request_with_headers`       | `bool`           | `const char *url`, `const char *headers`, `const char *payload`                                                | Sends a DELETE request with custom headers and a payload to the specified URL.                     |
-| `flipper_http_save_received_data`                | `bool`           | `size_t bytes_received`, `const char line_buffer[]`                                                            | Saves the received data to the SD card, with the specified size and buffer.                        |
 
-`In C, fhttp.received_data holds the received data from HTTP requests. In JavaScript and mPython, the response is returned directly from the function.`
+`In C, fhttp.last_response holds the received data. In JavaScript and mPython, the response is returned directly from the function.`
 
 ## Usage in `JavaScript` (flipper_http.js):
 | **Function Name**                      | **Return Value** | **Parameters**                                       | **Description**                                                                                      |
