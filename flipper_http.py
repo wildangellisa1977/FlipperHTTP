@@ -1,7 +1,7 @@
 """
 This is only available in uPython in version 1.5.0. and above: https://ofabel.github.io/mp-flipper/reference.html#classes
 Author - JBlanked
-For use with Flipper Zero and the FlipperHTTP flash: https://github.com/jblanked/WebCrawler-FlipperZero/tree/main/assets/FlipperHTTP
+For use with Flipper Zero and the FlipperHTTP flash: https://github.com/jblanked/FlipperHTTP
 Individual functions to save memory (uPython has already pushed the limits)
 Lastly, be careful looping in the requests, you'll get a furi check error. I'm assuming it's a memory issue and will be fixed in future updates.
 """
