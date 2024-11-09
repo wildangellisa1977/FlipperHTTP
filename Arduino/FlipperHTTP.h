@@ -426,11 +426,10 @@ String FlipperHTTP::get(String url)
         }
         else
         {
-            String error = http.errorToString(httpCode).c_str();
-            if (error != "connection failed")
+            if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
             {
                 Serial.print("[ERROR] GET Request Failed, error: ");
-                Serial.println(error);
+                Serial.println(http.errorToString(httpCode).c_str());
             }
             else // certification failed?
             {
@@ -494,11 +493,10 @@ String FlipperHTTP::get(String url, const char *headerKeys[], const char *header
         }
         else
         {
-            String error = http.errorToString(httpCode).c_str();
-            if (error != "connection failed")
+            if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
             {
                 Serial.print("[ERROR] GET Request Failed, error: ");
-                Serial.println(error);
+                Serial.println(http.errorToString(httpCode).c_str());
             }
             else // certification failed?
             {
@@ -558,11 +556,10 @@ String FlipperHTTP::delete_request(String url, String payload)
         }
         else
         {
-            String error = http.errorToString(httpCode).c_str();
-            if (error != "connection failed")
+            if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
             {
                 Serial.print("[ERROR] DELETE Request Failed, error: ");
-                Serial.println(error);
+                Serial.println(http.errorToString(httpCode).c_str());
             }
             else // certification failed?
             {
@@ -626,11 +623,10 @@ String FlipperHTTP::delete_request(String url, String payload, const char *heade
         }
         else
         {
-            String error = http.errorToString(httpCode).c_str();
-            if (error != "connection failed")
+            if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
             {
                 Serial.print("[ERROR] DELETE Request Failed, error: ");
-                Serial.println(error);
+                Serial.println(http.errorToString(httpCode).c_str());
             }
             else // certification failed?
             {
@@ -698,11 +694,10 @@ String FlipperHTTP::post(String url, String payload, const char *headerKeys[], c
         }
         else
         {
-            String error = http.errorToString(httpCode).c_str();
-            if (error != "connection failed")
+            if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
             {
                 Serial.print("[ERROR] POST Request Failed, error: ");
-                Serial.println(error);
+                Serial.println(http.errorToString(httpCode).c_str());
             }
             else // certification failed?
             {
@@ -763,11 +758,10 @@ String FlipperHTTP::post(String url, String payload)
         }
         else
         {
-            String error = http.errorToString(httpCode).c_str();
-            if (error != "connection failed")
+            if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
             {
                 Serial.print("[ERROR] POST Request Failed, error: ");
-                Serial.println(error);
+                Serial.println(http.errorToString(httpCode).c_str());
             }
             else // certification failed?
             {
@@ -832,11 +826,10 @@ String FlipperHTTP::put(String url, String payload, const char *headerKeys[], co
         }
         else
         {
-            String error = http.errorToString(httpCode).c_str();
-            if (error != "connection failed")
+            if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
             {
                 Serial.print("[ERROR] PUT Request Failed, error: ");
-                Serial.println(error);
+                Serial.println(http.errorToString(httpCode).c_str());
             }
             else // certification failed?
             {
@@ -896,11 +889,10 @@ String FlipperHTTP::put(String url, String payload)
         }
         else
         {
-            String error = http.errorToString(httpCode).c_str();
-            if (error != "connection failed")
+            if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
             {
                 Serial.print("[ERROR] PUT Request Failed, error: ");
-                Serial.println(error);
+                Serial.println(http.errorToString(httpCode).c_str());
             }
             else // certification failed?
             {
@@ -1006,10 +998,10 @@ bool FlipperHTTP::get_bytes_to_file(String url, const char *headerKeys[], const 
         }
         else
         {
-            String error = http.errorToString(httpCode).c_str();
-            if (error != "connection failed")
+            if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
             {
-                Serial.printf("[ERROR] GET request failed with error: %s\n", error.c_str());
+                Serial.print("[ERROR] GET Request Failed, error: ");
+                Serial.println(http.errorToString(httpCode).c_str());
             }
             else // certification failed?
             {
@@ -1157,10 +1149,10 @@ bool FlipperHTTP::post_bytes_to_file(String url, String payload, const char *hea
         }
         else
         {
-            String error = http.errorToString(httpCode).c_str();
-            if (error != "connection failed")
+            if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
             {
-                Serial.printf("[ERROR] POST request failed with error: %s\n", error.c_str());
+                Serial.print("[ERROR] POST Request Failed, error: ");
+                Serial.println(http.errorToString(httpCode).c_str());
             }
             else // certification failed?
             {

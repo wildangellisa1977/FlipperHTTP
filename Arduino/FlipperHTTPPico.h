@@ -349,17 +349,6 @@ String FlipperHTTP::readSerialLine()
 {
   String receivedData = "";
 
-  // this worked on dev board but even with delay changes, it was missing chars
-  // while (SerialPico.available() > 0)
-  // {
-  //   char incomingChar = SerialPico.read();
-  //   if (incomingChar == '\n')
-  //   {
-  //     break;
-  //   }
-  //   receivedData += incomingChar;
-  //   delay(5); // Minimal delay to allow buffer to fill
-  // }
   receivedData = SerialPico.readStringUntil('\n');
 
   receivedData.trim(); // Remove any leading/trailing whitespace
@@ -425,11 +414,10 @@ String FlipperHTTP::get(String url)
     }
     else
     {
-      String error = http.errorToString(httpCode).c_str();
-      if (error != "connection failed")
+      if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
       {
         SerialPico.print("[ERROR] GET Request Failed, error: ");
-        SerialPico.println(error);
+        SerialPico.println(http.errorToString(httpCode).c_str());
       }
       else // certification failed?
       {
@@ -493,11 +481,10 @@ String FlipperHTTP::get(String url, const char *headerKeys[], const char *header
     }
     else
     {
-      String error = http.errorToString(httpCode).c_str();
-      if (error != "connection failed")
+      if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
       {
         SerialPico.print("[ERROR] GET Request Failed, error: ");
-        SerialPico.println(error);
+        SerialPico.println(http.errorToString(httpCode).c_str());
       }
       else // certification failed?
       {
@@ -557,11 +544,10 @@ String FlipperHTTP::delete_request(String url, String payload)
     }
     else
     {
-      String error = http.errorToString(httpCode).c_str();
-      if (error != "connection failed")
+      if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
       {
         SerialPico.print("[ERROR] DELETE Request Failed, error: ");
-        SerialPico.println(error);
+        SerialPico.println(http.errorToString(httpCode).c_str());
       }
       else // certification failed?
       {
@@ -588,7 +574,6 @@ String FlipperHTTP::delete_request(String url, String payload)
     }
     http.end();
   }
-
   else
   {
     SerialPico.println("[ERROR] Unable to connect to the server.");
@@ -626,11 +611,10 @@ String FlipperHTTP::delete_request(String url, String payload, const char *heade
     }
     else
     {
-      String error = http.errorToString(httpCode).c_str();
-      if (error != "connection failed")
+      if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
       {
         SerialPico.print("[ERROR] DELETE Request Failed, error: ");
-        SerialPico.println(error);
+        SerialPico.println(http.errorToString(httpCode).c_str());
       }
       else // certification failed?
       {
@@ -698,11 +682,10 @@ String FlipperHTTP::post(String url, String payload, const char *headerKeys[], c
     }
     else
     {
-      String error = http.errorToString(httpCode).c_str();
-      if (error != "connection failed")
+      if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
       {
         SerialPico.print("[ERROR] POST Request Failed, error: ");
-        SerialPico.println(error);
+        SerialPico.println(http.errorToString(httpCode).c_str());
       }
       else // certification failed?
       {
@@ -763,11 +746,10 @@ String FlipperHTTP::post(String url, String payload)
     }
     else
     {
-      String error = http.errorToString(httpCode).c_str();
-      if (error != "connection failed")
+      if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
       {
         SerialPico.print("[ERROR] POST Request Failed, error: ");
-        SerialPico.println(error);
+        SerialPico.println(http.errorToString(httpCode).c_str());
       }
       else // certification failed?
       {
@@ -832,11 +814,10 @@ String FlipperHTTP::put(String url, String payload, const char *headerKeys[], co
     }
     else
     {
-      String error = http.errorToString(httpCode).c_str();
-      if (error != "connection failed")
+      if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
       {
         SerialPico.print("[ERROR] PUT Request Failed, error: ");
-        SerialPico.println(error);
+        SerialPico.println(http.errorToString(httpCode).c_str());
       }
       else // certification failed?
       {
@@ -896,11 +877,10 @@ String FlipperHTTP::put(String url, String payload)
     }
     else
     {
-      String error = http.errorToString(httpCode).c_str();
-      if (error != "connection failed")
+      if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
       {
         SerialPico.print("[ERROR] PUT Request Failed, error: ");
-        SerialPico.println(error);
+        SerialPico.println(http.errorToString(httpCode).c_str());
       }
       else // certification failed?
       {
@@ -988,10 +968,10 @@ bool FlipperHTTP::get_bytes_to_file(String url, const char *headerKeys[], const 
     }
     else
     {
-      String error = http.errorToString(httpCode).c_str();
-      if (error != "connection failed")
+      if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
       {
-        SerialPico.printf("[ERROR] GET request failed with error: %s\n", error.c_str());
+        SerialPico.print("[ERROR] GET Request Failed, error: ");
+        SerialPico.println(http.errorToString(httpCode).c_str());
       }
       else // certification failed?
       {
@@ -1103,10 +1083,10 @@ bool FlipperHTTP::post_bytes_to_file(String url, String payload, const char *hea
     }
     else
     {
-      String error = http.errorToString(httpCode).c_str();
-      if (error != "connection failed")
+      if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
       {
-        SerialPico.printf("[ERROR] POST request failed with error: %s\n", error.c_str());
+        SerialPico.print("[ERROR] POST Request Failed, error: ");
+        SerialPico.println(http.errorToString(httpCode).c_str());
       }
       else // certification failed?
       {
