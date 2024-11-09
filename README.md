@@ -35,7 +35,7 @@ The following apps have integrated FlipperHTTP to enhance their functionalities:
 16. Click on `FLASH - slow` to flash the firmware to your Developer Board. Wait until the process is complete. If successful, the LED of the Developer Board will flash GREEN three times.
 17. Lastly, on the Developer Board, press the RESET button once.
 
-You are all set. Here's a video tutorial: [https://www.youtube.com/watch?v=AZfbrLKJMpM](https://www.youtube.com/watch?v=AZfbrLKJMpM)
+You are all set. Here's a video tutorial: https://www.youtube.com/watch?v=AZfbrLKJMpM
 
 ## Raspberry Pi Pico W Installation (C++)
 
@@ -43,6 +43,8 @@ You are all set. Here's a video tutorial: [https://www.youtube.com/watch?v=AZfbr
 2. Press and hold the `BOOT` button on your Pico W for 2 seconds.
 3. While holding the `BOOT` button, connect the Pico W to your computer using a USB cable.
 4. Drag and drop the downloaded file onto the device. It will automatically reboot and begin running the FlipperHTTP firmware.
+
+Here's a video tutorial: https://www.youtube.com/watch?v=rdzKDCjbZ4k
 
 ## Raspberry Pi Pico W Installation (MicroPython)
 
@@ -63,7 +65,7 @@ You are all set. Here's a video tutorial: [https://www.youtube.com/watch?v=AZfbr
     - Go to the `File` menu, select `Save copy`, then choose `Raspberry Pi Pico`. Name the file `FlipperHTTPPico.py` and click `OK`.
     - Repeat the steps above for `main.py` and `urequests_2.py`, saving it to the Raspberry Pi Pico with the name `main.py` and `urequests_2.py`.
 
-You're all set! When you reboot your Pico W, it will run the FlipperHTTP Flash.
+You're all set! When you reboot your Pico W, it will run the FlipperHTTP Flash. Here's a video tutorial: https://www.youtube.com/watch?v=rdzKDCjbZ4k
 
 
 ## Usage in `C` (flipper_http.h and flipper_http.c)
