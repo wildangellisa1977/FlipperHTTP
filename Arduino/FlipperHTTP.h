@@ -3,7 +3,7 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over serial.
 Created: 2024-09-30
-Updated: 2024-10-26
+Updated: 2024-11-09
 
 Change Log:
 - 2024-09-30: Initial commit
@@ -17,6 +17,7 @@ Change Log:
 - 2024-10-22: Updated Post Bytes and Get Bytes methods
 - 2024-10-25: Updated to automatically connect to WiFi on boot if settings are saved
 - 2024-10-26: Updated the saveWifiSettings and loadWifiSettings methods to save and load a list of wifi networks, and added [WIFI/LIST] command
+- 2024-11-09: Added SSL certificate from https://letsencrypt.org/certificates/
 */
 
 #include <WiFi.h>
@@ -55,6 +56,7 @@ public:
         this->useLED = true;
         this->ledStart();
         this->loadWifiSettings();
+        this->client.setCACert(this->root_ca);
         Serial.flush();
     }
 
@@ -167,6 +169,43 @@ private:
     bool useLED = true;                                  // Variable to control LED usage
 
     bool readSerialSettings(String receivedData, bool connectAfterSave);
+
+    WiFiClientSecure client;
+
+    // Root CA from letsencrypt
+    // get it here: https://letsencrypt.org/certificates/
+    const char *root_ca =
+        "-----BEGIN CERTIFICATE-----\n"
+        "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\n"
+        "-----END CERTIFICATE-----\n";
 };
 
 //  Connect to Wifi using the loaded SSID and Password
@@ -371,13 +410,11 @@ bool FlipperHTTP::readSerialSettings(String receivedData, bool connectAfterSave)
 
 String FlipperHTTP::get(String url)
 {
-    WiFiClientSecure client;
-    client.setInsecure(); // Bypass certificate validation
 
     HTTPClient http;
     String payload = "";
 
-    if (http.begin(client, url))
+    if (http.begin(this->client, url))
     {
         int httpCode = http.GET();
 
@@ -389,8 +426,34 @@ String FlipperHTTP::get(String url)
         }
         else
         {
-            Serial.print("[ERROR] GET Request Failed, error: ");
-            Serial.println(http.errorToString(httpCode).c_str());
+            String error = http.errorToString(httpCode).c_str();
+            if (error != "connection failed")
+            {
+                Serial.print("[ERROR] GET Request Failed, error: ");
+                Serial.println(error);
+            }
+            else // certification failed?
+            {
+                // send request without SSL
+                http.end();
+                this->client.setInsecure();
+                if (http.begin(this->client, url))
+                {
+                    int newCode = http.GET();
+                    if (newCode > 0)
+                    {
+                        payload = http.getString();
+                        http.end();
+                        this->client.setCACert(this->root_ca); // reset to secure
+                        return payload;
+                    }
+                    else
+                    {
+                        this->client.setCACert(this->root_ca); // reset to secure
+                        Serial.println("[ERROR] GET Request Failed");
+                    }
+                }
+            }
         }
         http.end();
     }
@@ -407,15 +470,13 @@ String FlipperHTTP::get(String url)
 
 String FlipperHTTP::get(String url, const char *headerKeys[], const char *headerValues[], int headerSize)
 {
-    WiFiClientSecure client;
-    client.setInsecure(); // Bypass certificate
 
     HTTPClient http;
     String payload = "";
 
     http.collectHeaders(headerKeys, headerSize);
 
-    if (http.begin(client, url))
+    if (http.begin(this->client, url))
     {
 
         for (int i = 0; i < headerSize; i++)
@@ -433,8 +494,38 @@ String FlipperHTTP::get(String url, const char *headerKeys[], const char *header
         }
         else
         {
-            Serial.print("[ERROR] GET Request Failed, error: ");
-            Serial.println(http.errorToString(httpCode).c_str());
+            String error = http.errorToString(httpCode).c_str();
+            if (error != "connection failed")
+            {
+                Serial.print("[ERROR] GET Request Failed, error: ");
+                Serial.println(error);
+            }
+            else // certification failed?
+            {
+                // send request without SSL
+                http.end();
+                this->client.setInsecure();
+                if (http.begin(this->client, url))
+                {
+                    for (int i = 0; i < headerSize; i++)
+                    {
+                        http.addHeader(headerKeys[i], headerValues[i]);
+                    }
+                    int newCode = http.GET();
+                    if (newCode > 0)
+                    {
+                        payload = http.getString();
+                        http.end();
+                        this->client.setCACert(this->root_ca); // reset to secure
+                        return payload;
+                    }
+                    else
+                    {
+                        this->client.setCACert(this->root_ca); // reset to secure
+                        Serial.println("[ERROR] GET Request Failed");
+                    }
+                }
+            }
         }
         http.end();
     }
@@ -451,13 +542,11 @@ String FlipperHTTP::get(String url, const char *headerKeys[], const char *header
 
 String FlipperHTTP::delete_request(String url, String payload)
 {
-    WiFiClientSecure client;
-    client.setInsecure(); // Bypass certificate
 
     HTTPClient http;
     String response = "";
 
-    if (http.begin(client, url))
+    if (http.begin(this->client, url))
     {
         int httpCode = http.sendRequest("DELETE", payload);
 
@@ -469,12 +558,37 @@ String FlipperHTTP::delete_request(String url, String payload)
         }
         else
         {
-            Serial.print("[ERROR] DELETE Request Failed, error: ");
-            Serial.println(http.errorToString(httpCode).c_str());
+            String error = http.errorToString(httpCode).c_str();
+            if (error != "connection failed")
+            {
+                Serial.print("[ERROR] DELETE Request Failed, error: ");
+                Serial.println(error);
+            }
+            else // certification failed?
+            {
+                // send request without SSL
+                http.end();
+                this->client.setInsecure();
+                if (http.begin(this->client, url))
+                {
+                    int newCode = http.sendRequest("DELETE", payload);
+                    if (newCode > 0)
+                    {
+                        response = http.getString();
+                        http.end();
+                        this->client.setCACert(this->root_ca); // reset to secure
+                        return response;
+                    }
+                    else
+                    {
+                        this->client.setCACert(this->root_ca); // reset to secure
+                        Serial.println("[ERROR] DELETE Request Failed");
+                    }
+                }
+            }
         }
         http.end();
     }
-
     else
     {
         Serial.println("[ERROR] Unable to connect to the server.");
@@ -488,15 +602,13 @@ String FlipperHTTP::delete_request(String url, String payload)
 
 String FlipperHTTP::delete_request(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize)
 {
-    WiFiClientSecure client;
-    client.setInsecure(); // Bypass certificate
 
     HTTPClient http;
     String response = "";
 
     http.collectHeaders(headerKeys, headerSize);
 
-    if (http.begin(client, url))
+    if (http.begin(this->client, url))
     {
 
         for (int i = 0; i < headerSize; i++)
@@ -514,12 +626,41 @@ String FlipperHTTP::delete_request(String url, String payload, const char *heade
         }
         else
         {
-            Serial.print("[ERROR] DELETE Request Failed, error: ");
-            Serial.println(http.errorToString(httpCode).c_str());
+            String error = http.errorToString(httpCode).c_str();
+            if (error != "connection failed")
+            {
+                Serial.print("[ERROR] DELETE Request Failed, error: ");
+                Serial.println(error);
+            }
+            else // certification failed?
+            {
+                // send request without SSL
+                http.end();
+                this->client.setInsecure();
+                if (http.begin(this->client, url))
+                {
+                    for (int i = 0; i < headerSize; i++)
+                    {
+                        http.addHeader(headerKeys[i], headerValues[i]);
+                    }
+                    int newCode = http.sendRequest("DELETE", payload);
+                    if (newCode > 0)
+                    {
+                        response = http.getString();
+                        http.end();
+                        this->client.setCACert(this->root_ca); // reset to secure
+                        return response;
+                    }
+                    else
+                    {
+                        this->client.setCACert(this->root_ca); // reset to secure
+                        Serial.println("[ERROR] DELETE Request Failed");
+                    }
+                }
+            }
         }
         http.end();
     }
-
     else
     {
         Serial.println("[ERROR] Unable to connect to the server.");
@@ -533,15 +674,13 @@ String FlipperHTTP::delete_request(String url, String payload, const char *heade
 
 String FlipperHTTP::post(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize)
 {
-    WiFiClientSecure client;
-    client.setInsecure(); // Bypass certificate
 
     HTTPClient http;
     String response = "";
 
     http.collectHeaders(headerKeys, headerSize);
 
-    if (http.begin(client, url))
+    if (http.begin(this->client, url))
     {
 
         for (int i = 0; i < headerSize; i++)
@@ -559,12 +698,41 @@ String FlipperHTTP::post(String url, String payload, const char *headerKeys[], c
         }
         else
         {
-            Serial.print("[ERROR] POST Request Failed, error: ");
-            Serial.println(http.errorToString(httpCode).c_str());
+            String error = http.errorToString(httpCode).c_str();
+            if (error != "connection failed")
+            {
+                Serial.print("[ERROR] POST Request Failed, error: ");
+                Serial.println(error);
+            }
+            else // certification failed?
+            {
+                // send request without SSL
+                http.end();
+                this->client.setInsecure();
+                if (http.begin(this->client, url))
+                {
+                    for (int i = 0; i < headerSize; i++)
+                    {
+                        http.addHeader(headerKeys[i], headerValues[i]);
+                    }
+                    int newCode = http.POST(payload);
+                    if (newCode > 0)
+                    {
+                        response = http.getString();
+                        http.end();
+                        this->client.setCACert(this->root_ca); // reset to secure
+                        return response;
+                    }
+                    else
+                    {
+                        this->client.setCACert(this->root_ca); // reset to secure
+                        Serial.println("[ERROR] POST Request Failed");
+                    }
+                }
+            }
         }
         http.end();
     }
-
     else
     {
         Serial.println("[ERROR] Unable to connect to the server.");
@@ -578,13 +746,11 @@ String FlipperHTTP::post(String url, String payload, const char *headerKeys[], c
 
 String FlipperHTTP::post(String url, String payload)
 {
-    WiFiClientSecure client;
-    client.setInsecure(); // Bypass certificate
 
     HTTPClient http;
     String response = "";
 
-    if (http.begin(client, url))
+    if (http.begin(this->client, url))
     {
 
         int httpCode = http.POST(payload);
@@ -597,8 +763,34 @@ String FlipperHTTP::post(String url, String payload)
         }
         else
         {
-            Serial.print("[ERROR] POST Request Failed, error: ");
-            Serial.println(http.errorToString(httpCode).c_str());
+            String error = http.errorToString(httpCode).c_str();
+            if (error != "connection failed")
+            {
+                Serial.print("[ERROR] POST Request Failed, error: ");
+                Serial.println(error);
+            }
+            else // certification failed?
+            {
+                // send request without SSL
+                http.end();
+                this->client.setInsecure();
+                if (http.begin(this->client, url))
+                {
+                    int newCode = http.POST(payload);
+                    if (newCode > 0)
+                    {
+                        response = http.getString();
+                        http.end();
+                        this->client.setCACert(this->root_ca); // reset to secure
+                        return response;
+                    }
+                    else
+                    {
+                        this->client.setCACert(this->root_ca); // reset to secure
+                        Serial.println("[ERROR] POST Request Failed");
+                    }
+                }
+            }
         }
         http.end();
     }
@@ -616,15 +808,13 @@ String FlipperHTTP::post(String url, String payload)
 
 String FlipperHTTP::put(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize)
 {
-    WiFiClientSecure client;
-    client.setInsecure(); // Bypass certificate
 
     HTTPClient http;
     String response = "";
 
     http.collectHeaders(headerKeys, headerSize);
 
-    if (http.begin(client, url))
+    if (http.begin(this->client, url))
     {
 
         for (int i = 0; i < headerSize; i++)
@@ -642,12 +832,41 @@ String FlipperHTTP::put(String url, String payload, const char *headerKeys[], co
         }
         else
         {
-            Serial.print("[ERROR] PUT Request Failed, error: ");
-            Serial.println(http.errorToString(httpCode).c_str());
+            String error = http.errorToString(httpCode).c_str();
+            if (error != "connection failed")
+            {
+                Serial.print("[ERROR] PUT Request Failed, error: ");
+                Serial.println(error);
+            }
+            else // certification failed?
+            {
+                // send request without SSL
+                http.end();
+                this->client.setInsecure();
+                if (http.begin(this->client, url))
+                {
+                    for (int i = 0; i < headerSize; i++)
+                    {
+                        http.addHeader(headerKeys[i], headerValues[i]);
+                    }
+                    int newCode = http.PUT(payload);
+                    if (newCode > 0)
+                    {
+                        response = http.getString();
+                        http.end();
+                        this->client.setCACert(this->root_ca); // reset to secure
+                        return response;
+                    }
+                    else
+                    {
+                        this->client.setCACert(this->root_ca); // reset to secure
+                        Serial.println("[ERROR] PUT Request Failed");
+                    }
+                }
+            }
         }
         http.end();
     }
-
     else
     {
         Serial.println("[ERROR] Unable to connect to the server.");
@@ -661,13 +880,11 @@ String FlipperHTTP::put(String url, String payload, const char *headerKeys[], co
 
 String FlipperHTTP::put(String url, String payload)
 {
-    WiFiClientSecure client;
-    client.setInsecure(); // Bypass certificate
 
     HTTPClient http;
     String response = "";
 
-    if (http.begin(client, url))
+    if (http.begin(this->client, url))
     {
         int httpCode = http.PUT(payload);
 
@@ -679,12 +896,37 @@ String FlipperHTTP::put(String url, String payload)
         }
         else
         {
-            Serial.print("[ERROR] PUT Request Failed, error: ");
-            Serial.println(http.errorToString(httpCode).c_str());
+            String error = http.errorToString(httpCode).c_str();
+            if (error != "connection failed")
+            {
+                Serial.print("[ERROR] PUT Request Failed, error: ");
+                Serial.println(error);
+            }
+            else // certification failed?
+            {
+                // send request without SSL
+                http.end();
+                this->client.setInsecure();
+                if (http.begin(this->client, url))
+                {
+                    int newCode = http.PUT(payload);
+                    if (newCode > 0)
+                    {
+                        response = http.getString();
+                        http.end();
+                        this->client.setCACert(this->root_ca); // reset to secure
+                        return response;
+                    }
+                    else
+                    {
+                        this->client.setCACert(this->root_ca); // reset to secure
+                        Serial.println("[ERROR] PUT Request Failed");
+                    }
+                }
+            }
         }
         http.end();
     }
-
     else
     {
         Serial.println("[ERROR] Unable to connect to the server.");
@@ -698,14 +940,12 @@ String FlipperHTTP::put(String url, String payload)
 
 bool FlipperHTTP::get_bytes_to_file(String url, const char *headerKeys[], const char *headerValues[], int headerSize)
 {
-    WiFiClientSecure client;
-    client.setInsecure(); // Bypass certificate
 
     HTTPClient http;
 
     http.collectHeaders(headerKeys, headerSize);
 
-    if (http.begin(client, url))
+    if (http.begin(this->client, url))
     {
         for (int i = 0; i < headerSize; i++)
         {
@@ -766,7 +1006,79 @@ bool FlipperHTTP::get_bytes_to_file(String url, const char *headerKeys[], const 
         }
         else
         {
-            Serial.printf("[ERROR] GET request failed with error: %s\n", http.errorToString(httpCode).c_str());
+            String error = http.errorToString(httpCode).c_str();
+            if (error != "connection failed")
+            {
+                Serial.printf("[ERROR] GET request failed with error: %s\n", error.c_str());
+            }
+            else // certification failed?
+            {
+                // send request without SSL
+                http.end();
+                this->client.setInsecure();
+                if (http.begin(this->client, url))
+                {
+                    for (int i = 0; i < headerSize; i++)
+                    {
+                        http.addHeader(headerKeys[i], headerValues[i]);
+                    }
+                    int newCode = http.GET();
+                    if (newCode > 0)
+                    {
+                        int len = http.getSize();
+                        uint8_t buff[512] = {0};
+
+                        WiFiClient *stream = http.getStreamPtr();
+
+                        // Check available heap memory before starting
+                        size_t freeHeap = ESP.getFreeHeap();
+                        const size_t minHeapThreshold = 1024; // Minimum heap space to avoid overflow
+                        if (freeHeap < minHeapThreshold)
+                        {
+                            Serial.println("[ERROR] Not enough memory to start processing the response.");
+                            http.end();
+                            return false;
+                        }
+
+                        // Stream data while connected and available
+                        while (http.connected() && (len > 0 || len == -1))
+                        {
+                            size_t size = stream->available();
+                            if (size)
+                            {
+                                int c = stream->readBytes(buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
+                                Serial.write(buff, c); // Write data to serial
+                                if (len > 0)
+                                {
+                                    len -= c;
+                                }
+                            }
+                            delay(1); // Yield control to the system
+                        }
+
+                        freeHeap = ESP.getFreeHeap();
+                        if (freeHeap < minHeapThreshold)
+                        {
+                            Serial.println("[ERROR] Not enough memory to continue processing the response.");
+                            http.end();
+                            return false;
+                        }
+
+                        // Flush the serial buffer to ensure all data is sent
+                        http.end();
+                        Serial.flush();
+                        Serial.println();
+                        Serial.println("[GET/END]");
+                        this->client.setCACert(this->root_ca); // reset to secure
+                        return true;
+                    }
+                    else
+                    {
+                        this->client.setCACert(this->root_ca); // reset to secure
+                        Serial.printf("[ERROR] GET request failed with error: %s\n", http.errorToString(httpCode).c_str());
+                    }
+                }
+            }
         }
         http.end();
     }
@@ -779,14 +1091,12 @@ bool FlipperHTTP::get_bytes_to_file(String url, const char *headerKeys[], const 
 
 bool FlipperHTTP::post_bytes_to_file(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize)
 {
-    WiFiClientSecure client;
-    client.setInsecure(); // Bypass certificate
 
     HTTPClient http;
 
     http.collectHeaders(headerKeys, headerSize);
 
-    if (http.begin(client, url))
+    if (http.begin(this->client, url))
     {
         for (int i = 0; i < headerSize; i++)
         {
@@ -847,7 +1157,79 @@ bool FlipperHTTP::post_bytes_to_file(String url, String payload, const char *hea
         }
         else
         {
-            Serial.printf("[ERROR] POST request failed with error: %s\n", http.errorToString(httpCode).c_str());
+            String error = http.errorToString(httpCode).c_str();
+            if (error != "connection failed")
+            {
+                Serial.printf("[ERROR] POST request failed with error: %s\n", error.c_str());
+            }
+            else // certification failed?
+            {
+                // send request without SSL
+                http.end();
+                this->client.setInsecure();
+                if (http.begin(this->client, url))
+                {
+                    for (int i = 0; i < headerSize; i++)
+                    {
+                        http.addHeader(headerKeys[i], headerValues[i]);
+                    }
+                    int newCode = http.POST(payload);
+                    if (newCode > 0)
+                    {
+                        int len = http.getSize(); // Get the response content length
+                        uint8_t buff[512] = {0};  // Buffer for reading data
+
+                        WiFiClient *stream = http.getStreamPtr();
+
+                        // Check available heap memory before starting
+                        size_t freeHeap = ESP.getFreeHeap();
+                        const size_t minHeapThreshold = 1024; // Minimum heap space to avoid overflow
+                        if (freeHeap < minHeapThreshold)
+                        {
+                            Serial.println("[ERROR] Not enough memory to start processing the response.");
+                            http.end();
+                            return false;
+                        }
+
+                        // Stream data while connected and available
+                        while (http.connected() && (len > 0 || len == -1))
+                        {
+                            size_t size = stream->available();
+                            if (size)
+                            {
+                                int c = stream->readBytes(buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
+                                Serial.write(buff, c); // Write data to serial
+                                if (len > 0)
+                                {
+                                    len -= c;
+                                }
+                            }
+                            delay(1); // Yield control to the system
+                        }
+
+                        freeHeap = ESP.getFreeHeap();
+                        if (freeHeap < minHeapThreshold)
+                        {
+                            Serial.println("[ERROR] Not enough memory to continue processing the response.");
+                            http.end();
+                            return false;
+                        }
+
+                        http.end();
+                        // Flush the serial buffer to ensure all data is sent
+                        Serial.flush();
+                        Serial.println();
+                        Serial.println("[POST/END]");
+                        this->client.setCACert(this->root_ca); // reset to secure
+                        return true;
+                    }
+                    else
+                    {
+                        this->client.setCACert(this->root_ca); // reset to secure
+                        Serial.printf("[ERROR] POST request failed with error: %s\n", http.errorToString(httpCode).c_str());
+                    }
+                }
+            }
         }
         http.end();
     }
