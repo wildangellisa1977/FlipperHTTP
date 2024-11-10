@@ -20,7 +20,7 @@ The following apps have integrated FlipperHTTP to enhance their functionalities:
 3. Disconnect your WiFi Developer Board and connect your Flipper Zero to your computer.
 4. Open up qFlipper.
 5. Click on the `File manager`.
-6. Naviate to `SD Card/apps_data/esp_flasher/`. If the folder doesn’t exist, create it yourself or run the ESP Flasher app once.
+6. Navigate to `SD Card/apps_data/esp_flasher/`. If the folder doesn’t exist, create it yourself or run the ESP Flasher app once.
 7. Drag all three bin files you downloaded earlier into the directory.
 8. Disconnect your Flipper from your computer then turn off your Flipper.
 9. Connect your WiFi Developer Board into the Flipper then turn on your Flipper.
