@@ -987,6 +987,7 @@ bool FlipperHTTP::get_bytes_to_file(String url, const char *headerKeys[], const 
           int newCode = http.GET();
           if (newCode > 0)
           {
+            SerialPico.println("[GET/SUCCESS]");
             int len = http.getSize();
             uint8_t buff[512] = {0};
 
@@ -1102,6 +1103,7 @@ bool FlipperHTTP::post_bytes_to_file(String url, String payload, const char *hea
           int newCode = http.POST(payload);
           if (newCode > 0)
           {
+            SerialPico.println("[POST/SUCCESS]");
             int len = http.getSize(); // Get the response content length
             uint8_t buff[512] = {0};  // Buffer for reading data
 
