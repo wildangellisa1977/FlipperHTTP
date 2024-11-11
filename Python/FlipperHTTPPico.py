@@ -13,6 +13,7 @@ Change Log:
     - Implemented additional error handling
 - 2024-11-03: Updated requests module
 - 2024-11-07: Added garbage collection to free up memory and try-except block to handle exceptions
+- 2024-11-10: Updated stream handling in GET and POST requests
 """
 
 from machine import UART, Pin
@@ -22,10 +23,10 @@ from time import sleep, ticks_ms
 import errno
 import urequests_2 as requests  # for HTTP/1.1 support
 import gc
+from urequests_2 import RESPONSE_IS_BUSY
 
 led = Pin("LED", Pin.OUT)  # LED on the Pico W
 BAUD_RATE = 115200
-BUFFER_SIZE = 2048
 
 
 class FlipperHTTP:
@@ -65,7 +66,7 @@ class FlipperHTTP:
         self.use_led = True
         self.ledStart()
         self.loadWifiSettings()
-        self.uart.flush()
+        self.flush()
 
     def ledAction(self, timeout: float = 0.250):
         """Function to flash the LED"""
@@ -206,26 +207,50 @@ class FlipperHTTP:
             self.saveError(f"Failed to load or parse settings file: {e}")
             return False
 
-    def get(self, url, headers=None) -> Response:
+    def get(self, url, headers=None, stream=None, uart=None) -> Response:
         if not self.isConnectedToWiFi() and not self.connectToWiFi():
             return None
         if headers:
-            return requests.get(url=url, headers=headers)
+            if not stream:
+                return requests.get(url=url, headers=headers)
+            return requests.get(url=url, headers=headers, stream=stream, uart=uart)
         else:
-            return requests.get(url=url)
+            if not stream:
+                return requests.get(url=url)
+            return requests.get(url=url, stream=stream, uart=uart)
 
-    def post(self, url, payload, headers=None) -> Response:
+    def post(self, url, payload, headers=None, stream=None, uart=None) -> Response:
         if not self.isConnectedToWiFi() and not self.connectToWiFi():
             return None
         if payload is None:
             return None
         if isinstance(payload, (str, bytes)):
             if headers:
-                return requests.post(url, headers=headers, data=payload)
-            return requests.post(url, data=payload)
+                if not stream:
+                    return requests.post(url, headers=headers, data=payload)
+                return requests.post(
+                    url, headers=headers, data=payload, stream=stream, uart=uart
+                )
+            if not stream:
+                return requests.post(url, data=payload)
+            return requests.post(url, data=payload, stream=stream, uart=uart)
         if headers:
-            return requests.post(url, headers=headers, data=ujson.dumps(payload))
-        return requests.post(url, json_data=ujson.dumps(payload))
+            if not stream:
+                return requests.post(
+                    url, headers=headers, json_data=ujson.dumps(payload)
+                )
+            return requests.post(
+                url,
+                headers=headers,
+                json_data=ujson.dumps(payload),
+                stream=stream,
+                uart=uart,
+            )
+        if not stream:
+            return requests.post(url, json_data=ujson.dumps(payload))
+        return requests.post(
+            url, json_data=ujson.dumps(payload), stream=stream, uart=uart
+        )
 
     def put(self, url, payload, headers=None) -> Response:
         if not self.isConnectedToWiFi() and not self.connectToWiFi():
@@ -278,6 +303,9 @@ class FlipperHTTP:
 
     def println(self, message: str):
         self.uart.write(message + "\n")
+
+    def flush(self):
+        self.uart.flush()
 
     def readSerialLine(self) -> str:
         data = ""
@@ -360,7 +388,6 @@ class FlipperHTTP:
                     # Handle [REBOOT] command
                     elif data.startswith("[REBOOT]"):
                         machine.reset()
-                        pass
 
                     # scan for wifi networks
                     elif data.startswith("[WIFI/SCAN]"):
@@ -374,7 +401,8 @@ class FlipperHTTP:
                             self.println(str(network_data))
                             ap.active(False)
                         except Exception as e:
-                            pass
+                            self.saveError(e)
+                            self.println("[ERROR] Failed to scan for WiFi networks.")
 
                     # Handle [WIFI/SAVE] command
                     elif data.startswith("[WIFI/SAVE]"):
@@ -409,7 +437,7 @@ class FlipperHTTP:
                         if res is not None:
                             self.println("[GET/SUCCESS] GET request successful.")
                             self.println(res.text)
-                            self.uart.flush()
+                            self.flush()
                             self.println("[GET/END]")
                         else:
                             self.println(
@@ -433,7 +461,7 @@ class FlipperHTTP:
                         if res is not None:
                             self.println("[GET/SUCCESS] GET request successful.")
                             self.println(res.text)
-                            self.uart.flush()
+                            self.flush()
                             self.println("[GET/END]")
                         else:
                             self.println(
@@ -460,7 +488,7 @@ class FlipperHTTP:
                         if res is not None:
                             self.println("[POST/SUCCESS] POST request successful.")
                             self.println(res.text)
-                            self.uart.flush()
+                            self.flush()
                             self.println("[POST/END]")
                         else:
                             self.println(
@@ -487,7 +515,7 @@ class FlipperHTTP:
                         if res is not None:
                             self.println("[PUT/SUCCESS] PUT request successful.")
                             self.println(res.text)
-                            self.uart.flush()
+                            self.flush()
                             self.println("[PUT/END]")
                         else:
                             self.println(
@@ -511,7 +539,7 @@ class FlipperHTTP:
                         if res is not None:
                             self.println("[DELETE/SUCCESS] DELETE request successful.")
                             self.println(res.text)
-                            self.uart.flush()
+                            self.flush()
                             self.println("[DELETE/END]")
                         else:
                             self.println(
@@ -526,21 +554,19 @@ class FlipperHTTP:
                             data = ujson.loads(json_data)
 
                             url = data["url"]
-                            headers = data.get(
-                                "headers",
-                                {
-                                    "Content-Type": "application/octet-stream",
-                                    "User-Agent": "curl/7.84.0",  # Mimic curl User-Agent
-                                },
-                            )
+                            headers = data["headers"]
 
                             if not url:
                                 self.println("[ERROR] JSON does not contain url.")
                                 led.off()
                                 return  # Exit the handler if URL is missing
 
+                            if not headers:
+                                headers = None
+
                             # Make the GET request
-                            res = self.get(url, headers)
+                            gc.collect()
+                            res = self.get(url, headers, stream=True, uart=self.uart)
 
                             if res is not None:
                                 if res.status_code >= 400:
@@ -550,26 +576,12 @@ class FlipperHTTP:
                                     led.off()
                                     return
 
-                                self.println("[GET/SUCCESS] GET request successful.")
+                                # self.println("[GET/SUCCESS] GET request successful.")
 
-                                # Initialize a buffer
-                                buffer = bytearray(BUFFER_SIZE)
+                                # wait until res finishes sending uart
+                                while RESPONSE_IS_BUSY is True:
+                                    pass
 
-                                # Read and write the response in chunks until no more data is left
-                                while True:
-                                    bytes_read = res.raw.readinto(buffer)
-                                    if bytes_read is None:
-                                        # In some implementations, readinto might return None; handle gracefully
-                                        break
-                                    if bytes_read == 0:
-                                        # No more data to read
-                                        break
-                                    # Write the chunk to UART
-                                    self.write(buffer[:bytes_read])
-                                    self.uart.flush()
-
-                                self.println("")
-                                self.println("[GET/END]")
                                 res.close()  # Ensure the response is closed
                             else:
                                 self.println(
@@ -580,9 +592,7 @@ class FlipperHTTP:
                             self.println(f"[ERROR] Failed to parse JSON: {e}")
                         except Exception as e:
                             self.saveError(e)
-                            self.println(
-                                "[ERROR] POST request failed or returned empty data."
-                            )
+                            self.println(f"[ERROR] GET request failed: {e}")
 
                     # Handle [POST/BYTES] command
                     elif data.startswith("[POST/BYTES]"):
@@ -606,37 +616,26 @@ class FlipperHTTP:
                                 headers = None
 
                             # Make the POST request
-                            res = self.post(url, payload, headers)
+                            gc.collect()
+                            res = self.post(
+                                url, payload, headers, stream=True, uart=self.uart
+                            )
 
                             if res is not None:
 
                                 if res.status_code >= 400:
                                     self.println(
-                                        f"[ERROR] GET request failed: {res.status_code}"
+                                        f"[ERROR] POST request failed: {res.status_code}"
                                     )
                                     led.off()
                                     return
 
-                                self.println("[POST/SUCCESS] POST request successful.")
+                                # self.println("[POST/SUCCESS] POST request successful.")
 
-                                # Initialize a buffer
-                                buffer = bytearray(BUFFER_SIZE)
+                                # wait until res finishes sending uart
+                                while RESPONSE_IS_BUSY is True:
+                                    pass
 
-                                # Read and write the response in chunks until no more data is left
-                                while True:
-                                    bytes_read = res.raw.readinto(buffer)
-                                    if bytes_read is None:
-                                        # Handle if readinto returns None
-                                        break
-                                    if bytes_read == 0:
-                                        # No more data to read
-                                        break
-                                    # Write the chunk to UART
-                                    self.uart.write(buffer[:bytes_read])
-                                    self.uart.flush()
-
-                                self.println("")
-                                self.println("[POST/END]")
                                 res.close()  # Ensure the response is closed
                             else:
                                 self.println(
@@ -647,9 +646,7 @@ class FlipperHTTP:
                             self.println(f"[ERROR] Failed to parse JSON: {e}")
                         except Exception as e:
                             self.saveError(e)
-                            self.println(
-                                "[ERROR] POST request failed or returned empty data."
-                            )
+                            self.println(f"[ERROR] POST request failed: {e}")
 
                     # Handle [PARSE] command
                     elif data.startswith("[PARSE]"):
