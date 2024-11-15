@@ -1,9 +1,9 @@
-/* FlipperHTTPPico.h for flipper-http-pico.ino (for the Rasberry Pi Pico W)
+/* FlipperHTTPPico.h for flipper-http-pico.ino (for the Raspberry Pi Pico W)
 Author: JBlanked
 Github: https://github.com/jblanked/WebCrawler-FlipperZero/tree/main/assets/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over serial.
 Created: 2024-10-24
-Updated: 2024-11-09
+Updated: 2024-11-15
 
 Change Log:
 - 2024-10-24: Initial commit
@@ -11,8 +11,8 @@ Change Log:
   - Reading char by char worked on the dev board but was missing chars on the Pico
 - 2024-10-26: Updated the saveWifiSettings and loadWifiSettings methods to save and load a list of wifi networks, and added [WIFI/LIST] command
 - 2024-11-09: Added SSL certificate from https://letsencrypt.org/certificates/
+- 2024-11-15: Updated to check heap during [GET/BYTES] and [POST/BYTES] to avoid memory issues
 */
-
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
@@ -43,22 +43,18 @@ public:
 
     if (!LittleFS.begin())
     {
-      SerialPico.println("An Error has occurred while mounting LittleFS. Attempting to format...");
       if (LittleFS.format())
       {
-        SerialPico.println("File system formatted successfully. Re-mounting...");
         if (!LittleFS.begin())
         {
           SerialPico.println("Failed to re-mount LittleFS after formatting.");
-          delay(1000);
-          return;
+          rp2040.reboot();
         }
       }
       else
       {
         SerialPico.println("File system formatting failed.");
-        delay(1000);
-        return;
+        rp2040.reboot();
       }
     }
     this->useLED = true;
@@ -942,6 +938,16 @@ bool FlipperHTTP::get_bytes_to_file(String url, const char *headerKeys[], const 
 
       WiFiClient *stream = http.getStreamPtr();
 
+      // Check available heap memory before starting
+      size_t freeHeap = rp2040.getFreeHeap();
+      const size_t minHeapThreshold = 1024; // Minimum heap space to avoid overflow
+      if (freeHeap < minHeapThreshold)
+      {
+        SerialPico.println("[ERROR] Not enough memory to start processing the response.");
+        http.end();
+        return false;
+      }
+
       // Stream data while connected and available
       while (http.connected() && (len > 0 || len == -1))
       {
@@ -956,6 +962,14 @@ bool FlipperHTTP::get_bytes_to_file(String url, const char *headerKeys[], const 
           }
         }
         delay(1); // Yield control to the system
+      }
+
+      freeHeap = rp2040.getFreeHeap();
+      if (freeHeap < minHeapThreshold)
+      {
+        SerialPico.println("[ERROR] Not enough memory to continue processing the response.");
+        http.end();
+        return false;
       }
 
       // Flush the serial buffer to ensure all data is sent
@@ -993,6 +1007,16 @@ bool FlipperHTTP::get_bytes_to_file(String url, const char *headerKeys[], const 
 
             WiFiClient *stream = http.getStreamPtr();
 
+            // Check available heap memory before starting
+            size_t freeHeap = rp2040.getFreeHeap();
+            const size_t minHeapThreshold = 1024; // Minimum heap space to avoid overflow
+            if (freeHeap < minHeapThreshold)
+            {
+              SerialPico.println("[ERROR] Not enough memory to start processing the response.");
+              http.end();
+              return false;
+            }
+
             // Stream data while connected and available
             while (http.connected() && (len > 0 || len == -1))
             {
@@ -1007,6 +1031,14 @@ bool FlipperHTTP::get_bytes_to_file(String url, const char *headerKeys[], const 
                 }
               }
               delay(1); // Yield control to the system
+            }
+
+            freeHeap = rp2040.getFreeHeap();
+            if (freeHeap < minHeapThreshold)
+            {
+              SerialPico.println("[ERROR] Not enough memory to continue processing the response.");
+              http.end();
+              return false;
             }
 
             // Flush the serial buffer to ensure all data is sent
@@ -1058,6 +1090,16 @@ bool FlipperHTTP::post_bytes_to_file(String url, String payload, const char *hea
 
       WiFiClient *stream = http.getStreamPtr();
 
+      // Check available heap memory before starting
+      size_t freeHeap = rp2040.getFreeHeap();
+      const size_t minHeapThreshold = 1024; // Minimum heap space to avoid overflow
+      if (freeHeap < minHeapThreshold)
+      {
+        SerialPico.println("[ERROR] Not enough memory to start processing the response.");
+        http.end();
+        return false;
+      }
+
       // Stream data while connected and available
       while (http.connected() && (len > 0 || len == -1))
       {
@@ -1072,6 +1114,14 @@ bool FlipperHTTP::post_bytes_to_file(String url, String payload, const char *hea
           }
         }
         delay(1); // Yield control to the system
+      }
+
+      freeHeap = rp2040.getFreeHeap();
+      if (freeHeap < minHeapThreshold)
+      {
+        SerialPico.println("[ERROR] Not enough memory to continue processing the response.");
+        http.end();
+        return false;
       }
 
       http.end();
@@ -1109,6 +1159,16 @@ bool FlipperHTTP::post_bytes_to_file(String url, String payload, const char *hea
 
             WiFiClient *stream = http.getStreamPtr();
 
+            // Check available heap memory before starting
+            size_t freeHeap = rp2040.getFreeHeap();
+            const size_t minHeapThreshold = 1024; // Minimum heap space to avoid overflow
+            if (freeHeap < minHeapThreshold)
+            {
+              SerialPico.println("[ERROR] Not enough memory to start processing the response.");
+              http.end();
+              return false;
+            }
+
             // Stream data while connected and available
             while (http.connected() && (len > 0 || len == -1))
             {
@@ -1123,6 +1183,14 @@ bool FlipperHTTP::post_bytes_to_file(String url, String payload, const char *hea
                 }
               }
               delay(1); // Yield control to the system
+            }
+
+            freeHeap = rp2040.getFreeHeap();
+            if (freeHeap < minHeapThreshold)
+            {
+              SerialPico.println("[ERROR] Not enough memory to continue processing the response.");
+              http.end();
+              return false;
             }
 
             http.end();
@@ -1222,7 +1290,7 @@ void FlipperHTTP::loop()
     else if (_data.startsWith("[REBOOT]"))
     {
       this->useLED = true;
-      // ESP.restart();
+      rp2040.reboot();
     }
     // scan for wifi networks
     else if (_data.startsWith("[WIFI/SCAN]"))
