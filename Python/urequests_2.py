@@ -33,9 +33,9 @@ class Response:
 
 
 def read_chunked(s, uart=None, method="GET"):
-    global RESPONSE_IS_BUSY  # so we can modify the global variable
+    global RESPONSE_IS_BUSY
     if uart:
-        uart.write(f"[{method}/SUCCESS] {method} request successful.\n")
+        uart.write(f"[{method}/SUCCESS]\n")
     body = b""
     while True:
         RESPONSE_IS_BUSY = True
@@ -68,7 +68,7 @@ def read_chunked(s, uart=None, method="GET"):
     if uart:
         uart.flush()
         uart.write("\n")
-        uart.write(f"[{method}/END]")
+        uart.write(f"[{method}/END]\n")
     RESPONSE_IS_BUSY = False
     return body
 
@@ -85,7 +85,7 @@ def request(
     parse_headers=True,
     uart=None,
 ):
-    global RESPONSE_IS_BUSY  # so we can modify the global variable
+    global RESPONSE_IS_BUSY
     redirect = None  # redirection url, None means no redirection
     chunked_data = (
         data and getattr(data, "__next__", None) and not getattr(data, "__len__", None)
@@ -209,45 +209,52 @@ def request(
             if not uart:
                 body = s.read(content_length)
             else:
-                # Read and write in fixed-size chunks
-                uart.write(f"[{method}/SUCCESS] {method} request successful.\n")
-                while content_length > 0:
-                    RESPONSE_IS_BUSY = True
-                    chunk_size = min(2048, content_length)
-                    chunk = s.read(chunk_size)
-                    if not chunk:
-                        break
-                    uart.write(chunk)
+                try:
+                    uart.write(f"[{method}/SUCCESS] Total bytes: {content_length}\n")
+                    while content_length > 0:
+                        RESPONSE_IS_BUSY = True
+                        chunk_size = min(2048, content_length)
+                        chunk = s.read(chunk_size)
+                        if not chunk:
+                            break
+                        uart.write(chunk)
+                        uart.flush()
+                        content_length -= len(chunk)
                     uart.flush()
-                    content_length -= len(chunk)
-                uart.flush()
-                uart.write("\n")
-                uart.write(f"[{method}/END]")
-                RESPONSE_IS_BUSY = False
+                    uart.write("\n")
+                    uart.write(f"[{method}/END]\n")
+                except Exception as e:
+                    print(e)
+                finally:
+                    RESPONSE_IS_BUSY = False
         else:
             # Read until the socket is closed
             if not uart:
                 body = s.read()
             else:
-                uart.write(f"[{method}/SUCCESS] {method} request successful.\n")
-                while True:
-                    RESPONSE_IS_BUSY = True
-                    chunk = s.read(2048)
-                    if not chunk:
-                        break
-                    uart.write(chunk)
+                try:
+                    uart.write(f"[{method}/SUCCESS]\n")
+                    while True:
+                        RESPONSE_IS_BUSY = True
+                        chunk = s.read(2048)
+                        if not chunk:
+                            break
+                        uart.write(chunk)
+                        uart.flush()
+
                     uart.flush()
-                uart.flush()
-                uart.write("\n")
-                uart.write(f"[{method}/END]")
-                RESPONSE_IS_BUSY = False
+                    uart.write("\n")
+                    uart.write(f"[{method}/END]\n")
+                except Exception as e:
+                    print(e)
+                finally:
+                    RESPONSE_IS_BUSY = False
 
         if redirect:
             s.close()
             if status in [301, 302, 303]:
                 return request("GET", redirect, None, None, headers, stream)
-            else:
-                return request(method, redirect, data, json_data, headers, stream)
+            return request(method, redirect, data, json_data, headers, stream)
         else:
             resp = Response(body)
             resp.status_code = status
