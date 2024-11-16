@@ -96,7 +96,7 @@ def flipper_http_connect_wifi() -> bool:
         return True
     if "[CONNECTED]" in data:
         return True
-    elif "[INFO]" in data:
+    if "[INFO]" in data:
         return True
     return False
 
@@ -218,6 +218,19 @@ def flipper_http_get_request_with_headers(url: str, headers: str) -> str:
     return ""
 
 
+def flipper_http_get_request_bytes(url: str, headers: str) -> bytes:
+    """Send a GET request to the specified URL with headers"""
+    if url is None or headers is None:
+        return b""
+    flipper_http_send_data('[GET/BYTES]{url:"' + url + '",headers:' + headers + "}")
+    if "[GET/SUCCESS]" in flipper_http_read_data():
+        data = flipper_http_read_data(500)
+        clear_buffer()
+        return data.encode()
+    clear_buffer()
+    return b""
+
+
 def flipper_http_post_request_with_headers(url: str, headers: str, data: str):
     """Send a POST request to the specified URL with headers and data"""
     if url is None:
@@ -237,6 +250,27 @@ def flipper_http_post_request_with_headers(url: str, headers: str, data: str):
         return data
     clear_buffer()
     return ""
+
+
+def flipper_http_post_request_bytes(url: str, headers: str, data: str):
+    """Send a POST request to the specified URL with headers and data"""
+    if url is None:
+        return b""
+    flipper_http_send_data(
+        '[POST/BYTES]{"url":"'
+        + url
+        + '","headers":'
+        + headers
+        + ',"payload":'
+        + data
+        + "}"
+    )
+    if "[POST/SUCCESS]" in flipper_http_read_data():
+        data = flipper_http_read_data(500)
+        clear_buffer()
+        return data.encode()
+    clear_buffer()
+    return b""
 
 
 def flipper_http_put_request_with_headers(url: str, headers: str, data: str):
