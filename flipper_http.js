@@ -1,4 +1,4 @@
-// Description: Flipper HTTP API for the Flipper Wifi Developer Board.
+// Description: Flipper HTTP API (For use with Flipper Zero and the FlipperHTTP flash: https://github.com/jblanked/FlipperHTTP)
 // Global: flipper_http_init, flipper_http_deinit, flipper_http_rx_callback(), flipper_http_send_data, flipper_http_connect_wifi, flipper_http_disconnect_wifi, flipper_http_ping, flipper_http_save_wifi, flipper_http_get_request
 // License: MIT
 // Author: JBlanked
@@ -61,8 +61,9 @@ let fhttp = {
         if (response === undefined) {
             return false;
         }
+        let sresponse = this.to_string(response);
         this.clear_buffer(true); // Clear the buffer
-        return this.includes(this.to_string(response), "[SUCCESS]") || this.includes(this.to_string(response), "[CONNECTED]") || this.includes(this.to_string(response), "[INFO]");
+        return this.includes(sresponse, "[SUCCESS]") || this.includes(sresponse, "[CONNECTED]") || this.includes(sresponse, "[INFO]");
     },
     // Disconnect from wifi
     disconnect_wifi: function () {
@@ -71,8 +72,9 @@ let fhttp = {
         if (response === undefined) {
             return false;
         }
+        let sresponse = this.to_string(response);
         this.clear_buffer(true); // Clear the buffer
-        return this.includes(this.to_string(response), "[DISCONNECTED]") || this.includes(this.to_string(response), "WiFi stop");
+        return this.includes(sresponse, "[DISCONNECTED]") || this.includes(sresponse, "WiFi stop");
     },
     // Send a ping to the board
     ping: function () {
@@ -176,7 +178,13 @@ let fhttp = {
     // As mjs is updated, this can be improved
     get_request: function (url) {
         serial.write('[GET]' + url);
-        if (this.read_data(500) === "[GET/SUCCESS] GET request successful.") {
+        let response = this.read_data(500);
+        if (response === undefined) {
+            this.clear_buffer(false); // Clear the buffer
+            return false;
+        }
+        let sresponse = this.to_string(response);
+        if (this.includes(sresponse, "[GET/SUCCESS]")) {
             while (true) {
                 let line = this.read_data(500);
                 if (line === "[GET/END]") {
@@ -197,7 +205,40 @@ let fhttp = {
     // another GET request but with headers
     get_request_with_headers: function (url, headers) {
         serial.write('[GET/HTTP]{url:"' + url + '",headers:' + headers + '}');
-        if (this.read_data(500) === "[GET/SUCCESS] GET request successful.") {
+        let response = this.read_data(500);
+        if (response === undefined) {
+            this.clear_buffer(false); // Clear the buffer
+            return false;
+        }
+        let sresponse = this.to_string(response);
+        if (this.includes(sresponse, "[GET/SUCCESS]")) {
+            while (true) {
+                let line = this.read_data(500);
+                if (line === "[GET/END]") {
+                    break;
+                }
+                if (line !== undefined) {
+                    this.clear_buffer(false); // Clear the buffer
+                    return line;
+                }
+            }
+        }
+        else {
+            print("GET request failed");
+        }
+        this.clear_buffer(); // Clear the buffer
+        return "";
+    },
+    // GET request with headers and return bytes
+    get_request_bytes: function (url, headers) {
+        serial.write('[GET/BYTES]{url:"' + url + '",headers:' + headers + '}');
+        let response = this.read_data(500);
+        if (response === undefined) {
+            this.clear_buffer(false); // Clear the buffer
+            return false;
+        }
+        let sresponse = this.to_string(response);
+        if (this.includes(sresponse, "[GET/SUCCESS]")) {
             while (true) {
                 let line = this.read_data(500);
                 if (line === "[GET/END]") {
@@ -218,7 +259,13 @@ let fhttp = {
     // send POST request with headers
     post_request_with_headers: function (url, headers, data) {
         serial.write('[POST/HTTP]{"url":"' + url + '","headers":' + headers + ',"payload":' + data + '}');
-        if (this.read_data(500) === "[POST/SUCCESS] POST request successful.") {
+        let response = this.read_data(500);
+        if (response === undefined) {
+            this.clear_buffer(false); // Clear the buffer
+            return false;
+        }
+        let sresponse = this.to_string(response);
+        if (this.includes(sresponse, "[POST/SUCCESS]")) {
             while (true) {
                 let line = this.read_data(500);
                 if (line === "[POST/END]") {
@@ -239,7 +286,13 @@ let fhttp = {
     // send PUT request with headers
     put_request_with_headers: function (url, headers, data) {
         serial.write('[PUT/HTTP]{"url":"' + url + '","headers":' + headers + ',"payload":' + data + '}');
-        if (this.read_data(500) === "[PUT/SUCCESS] PUT request successful.") {
+        let response = this.read_data(500);
+        if (response === undefined) {
+            this.clear_buffer(false); // Clear the buffer
+            return false;
+        }
+        let sresponse = this.to_string(response);
+        if (this.includes(sresponse, "[PUT/SUCCESS]")) {
             while (true) {
                 let line = this.read_data(500);
                 if (line === "[PUT/END]") {
@@ -260,7 +313,13 @@ let fhttp = {
     // send DELETE request with headers
     delete_request_with_headers: function (url, headers, data) {
         serial.write('[DELETE/HTTP]{"url":"' + url + '","headers":' + headers + ',"payload":' + data + '}');
-        if (this.read_data(500) === "[DELETE/SUCCESS] DELETE request successful.") {
+        let response = this.read_data(500);
+        if (response === undefined) {
+            this.clear_buffer(false); // Clear the buffer
+            return false;
+        }
+        let sresponse = this.to_string(response);
+        if (this.includes(sresponse, "[DELETE/SUCCESS]")) {
             while (true) {
                 let line = this.read_data(500);
                 if (line === "[DELETE/END]") {
