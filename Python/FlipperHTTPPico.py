@@ -3,7 +3,7 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over serial.
 Created: 2024-10-30
-Updated: 2024-11-15
+Updated: 2024-11-18
 
 Change Log:
 - 2024-10-30: Initial commit
@@ -17,6 +17,7 @@ Change Log:
 - 2024-11-15:
     - Updated [GET/BYTES] and [POST/BYTES]
     - Fixed local variable referenced before assignment error
+- 2024-11-18: Added SD card support
 """
 
 from machine import UART, Pin
@@ -27,6 +28,7 @@ import errno
 import urequests_2 as requests  # for HTTP/1.1 support
 import gc
 from urequests_2 import RESPONSE_IS_BUSY
+from EasySD import EasySD
 
 
 class FlipperHTTP:
@@ -41,11 +43,25 @@ class FlipperHTTP:
         self.uart = None
         self.led = Pin("LED", Pin.OUT)  # LED on the Pico W
         self.BAUD_RATE = 115200
+        self.sd = None
+
+        try:
+            self.sd = EasySD()
+        except Exception as e:
+            self.saveError(e)
 
     def saveError(self, err, is_os_error: bool = False) -> None:
         if not is_os_error:
-            with open("error.txt", "w") as f:
-                f.write(f"Error: {err}")
+            if not self.sd:
+                with open("error.txt", "w") as f:
+                    f.write(f"Error: {err}")
+            else:
+                try:
+                    self.sd.write("error.txt", f"Error: {err}")
+                except Exception as e:
+                    print(e)
+                    with open("error.txt", "w") as f:
+                        f.write(f"Error: {err}")
         else:
             if err.errno == errno.ENOENT:
                 reason = "File or directory not found."
@@ -58,8 +74,16 @@ class FlipperHTTP:
             else:
                 reason = str(err)
 
-            with open("error.txt", "w") as f:
-                f.write(f"OSError: {reason}")
+            if not self.sd:
+                with open("error.txt", "w") as f:
+                    f.write(f"OSError: {reason}")
+            else:
+                try:
+                    self.sd.write("error.txt", f"OSError: {reason}")
+                except Exception as e:
+                    print(e)
+                    with open("error.txt", "w") as f:
+                        f.write(f"OSError: {reason}")
 
     def setup(self) -> None:
         """Start UART and load the WiFi credentials"""
@@ -128,8 +152,16 @@ class FlipperHTTP:
 
             # Load existing settings
             try:
-                with open("flipper-http.json", "r") as f:
-                    settings = ujson.loads(f.read())
+                if not self.sd:
+                    with open("flipper-http.json", "r") as f:
+                        settings = ujson.loads(f.read())
+                else:
+                    try:
+                        settings = ujson.loads(self.sd.read("flipper-http.json"))
+                    except Exception as e:
+                        print(e)
+                        with open("flipper-http.json", "r") as f:
+                            settings = ujson.loads(f.read())
             except OSError as e:
                 if e.errno == errno.ENOENT:
                     settings = {"wifi_list": []}  # Initialize if file doesn't exist
@@ -155,8 +187,16 @@ class FlipperHTTP:
 
                 # Save updated settings to file
                 try:
-                    with open("flipper-http.json", "w") as f:
-                        f.write(ujson.dumps(settings))
+                    if not self.sd:
+                        with open("flipper-http.json", "w") as f:
+                            f.write(ujson.dumps(settings))
+                    else:
+                        try:
+                            self.sd.write("flipper-http.json", ujson.dumps(settings))
+                        except Exception as e:
+                            print(e)
+                            with open("flipper-http.json", "w") as f:
+                                f.write(ujson.dumps(settings))
                     self.println("[SUCCESS] Settings saved.")
                     self.ssid = new_ssid
                     self.password = new_password
@@ -177,8 +217,19 @@ class FlipperHTTP:
     def loadWifiSettings(self) -> bool:
         try:
             # Open the settings file and read content
-            with open("flipper-http.json", "r") as f:
-                file_content = f.read()
+            if not self.sd:
+                with open("flipper-http.json", "r") as f:
+                    file_content = f.read()
+            else:
+                try:
+                    file_content = self.sd.read("flipper-http.json")
+                except Exception as e:
+                    print(e)
+                    with open("flipper-http.json", "r") as f:
+                        file_content = f.read
+
+            if not file_content:
+                return False
 
             # Parse JSON content
             settings = ujson.loads(file_content)
