@@ -18,6 +18,7 @@ Change Log:
     - Updated [GET/BYTES] and [POST/BYTES]
     - Fixed local variable referenced before assignment error
 - 2024-11-18: Added SD card support
+- 2024-11-19: Mount/Unmount SD card
 """
 
 from machine import UART, Pin
@@ -47,6 +48,8 @@ class FlipperHTTP:
 
         try:
             self.sd = EasySD()
+            if not sd.mount():
+                self.sd = None
         except Exception as e:
             self.saveError(e)
 
@@ -790,3 +793,4 @@ class FlipperHTTP:
                 self.println(f"[ERROR] {e}")
                 self.led.off()
                 continue
+

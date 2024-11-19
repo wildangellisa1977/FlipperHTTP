@@ -17,7 +17,7 @@ class EasySD:
             self.spi = SPI(
                 1, sck=Pin(sck_gpio), mosi=Pin(mosi_gpio), miso=Pin(miso_gpio)
             )
-            self.cs = Pin(cs_gpio)
+            self.cs = Pin(cs_gpio, Pin.OUT)
             self.sd = SDCard(self.spi, self.cs)
             self.mounted = False
         except Exception as e:
@@ -99,7 +99,7 @@ class EasySD:
                 return f.read()
         except OSError as e:
             print(f"Error occurred while reading: {self.os_error(e)}")
-            return
+            return ""
         except Exception as e:
             print(f"Error occurred while reading: {e}")
             return ""
@@ -459,3 +459,4 @@ class SDCard:
     def ioctl(self, op, arg):
         if op == 4:  # get number of blocks
             return self.sectors
+

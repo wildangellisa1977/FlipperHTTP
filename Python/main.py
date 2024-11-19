@@ -4,7 +4,7 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over serial.
 Created: 2024-10-30
-Updated: 2024-11-18
+Updated: 2024-11-19
 """
 
 from FlipperHTTPPico import FlipperHTTP
@@ -17,6 +17,11 @@ if __name__ == "__main__":
     try:
         fhttp.loop()
     except KeyboardInterrupt:
+        if fhttp.sd is not None:
+            try:
+                fhttp.sd.unmount()
+            except Exception as e:
+                pass
         fhttp.led.off()
     except OSError as e:
         fhttp.ledStart()
@@ -24,3 +29,4 @@ if __name__ == "__main__":
     except Exception as e:
         fhttp.ledStart()
         fhttp.saveError(e, False)
+
