@@ -24,6 +24,7 @@ class EasySD:
         except Exception as e:
             print(f"Failed to initialize SPI or SD card: {e}")
             self.is_mounted = False
+            return None
 
     def os_error(self, err: OSError) -> str:
         """Return a human-readable error message based on the OSError code."""
