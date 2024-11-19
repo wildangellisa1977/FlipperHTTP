@@ -47,9 +47,7 @@ class FlipperHTTP:
         self.sd = None
 
         try:
-            self.sd = EasySD()
-            if not self.sd.mount():
-                self.sd = None
+            self.sd = EasySD(auto_mount=True)
         except Exception as e:
             self.saveError(e)
 
@@ -793,4 +791,3 @@ class FlipperHTTP:
                 self.println(f"[ERROR] {e}")
                 self.led.off()
                 continue
-

@@ -17,7 +17,7 @@ if __name__ == "__main__":
     try:
         fhttp.loop()
     except KeyboardInterrupt:
-        if fhttp.sd is not None:
+        if fhttp.sd and fhttp.sd.is_mounted:
             try:
                 fhttp.sd.unmount()
             except Exception as e:
@@ -29,4 +29,3 @@ if __name__ == "__main__":
     except Exception as e:
         fhttp.ledStart()
         fhttp.saveError(e, False)
-
