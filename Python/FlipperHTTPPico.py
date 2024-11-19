@@ -48,7 +48,7 @@ class FlipperHTTP:
 
         try:
             self.sd = EasySD()
-            if not sd.mount():
+            if not self.sd.mount():
                 self.sd = None
         except Exception as e:
             self.saveError(e)
