@@ -48,7 +48,7 @@ Here's a video tutorial: https://www.youtube.com/watch?v=rdzKDCjbZ4k
 
 ## Raspberry Pi Pico W Installation (MicroPython)
 
-1. Download the `main.py`, `urequests_2.py`, `EasySD.py`, and `FlipperHTTPPico.py` files.
+1. Download the `main.py`, `urequests_2.py`, `EasySD.py`, and `FlipperHTTPPico.py` files in the `src/Raspberry Pi Pico W/MicroPython` folder.
 2. Press and hold the `BOOT` button on your Pico W for 2 seconds.
 3. While holding the `BOOT` button, connect the Pico W to your computer using a USB cable.
 4. The Pico W should appear as a storage device on your computer.

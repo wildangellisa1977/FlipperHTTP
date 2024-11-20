@@ -1,68 +1,41 @@
-""" FlipperHTTPPico.py (for the Raspberry Pi Pico W)
+""" FlipperHTTP-Pi2w.py (for the Raspberry Pi 2W)
 Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over serial.
-Created: 2024-10-30
-Updated: 2024-11-18
+Created: 2024-11-20
+Updated: 2024-11-20
 
 Change Log:
-- 2024-10-30: Initial commit
-- 2024-11-01:
-    - Added HTTP/1.1 support
-    - Improved handling of bytes in buffers
-    - Implemented additional error handling
-- 2024-11-03: Updated requests module
-- 2024-11-07: Added garbage collection to free up memory and try-except block to handle exceptions
-- 2024-11-10: Updated stream handling in GET and POST requests
-- 2024-11-15:
-    - Updated [GET/BYTES] and [POST/BYTES]
-    - Fixed local variable referenced before assignment error
-- 2024-11-18: Added SD card support
-- 2024-11-19: Mount/Unmount SD card
+- 2024-11-20: Initial commit
 """
 
-from machine import UART, Pin
-import network
-import ujson
-from time import sleep, ticks_ms
+import json
+import time
+from time import sleep
 import errno
-import urequests_2 as requests  # for HTTP/1.1 support
+import requests
 import gc
-from urequests_2 import RESPONSE_IS_BUSY
-from EasySD import EasySD
+import serial
+import pywifi  # pip install pywifi (only for Linux/Windows)
+from pywifi import const
 
 
 class FlipperHTTP:
-    def __init__(self) -> FlipperHTTP:
+    def __init__(self):
         self.local_ip = None
+        self.wlan = pywifi.PyWiFi().interfaces()[0]
         self.wifi_ip = None
-        self.wlan = network.WLAN(network.STA_IF)
         self.ssid = None
         self.password = None
         self.use_led = True
         self.timeout = 2000  # milliseconds
         self.uart = None
-        self.led = Pin("LED", Pin.OUT)  # LED on the Pico W
         self.BAUD_RATE = 115200
-        self.sd = None
-
-        try:
-            self.sd = EasySD(auto_mount=True)
-        except Exception as e:
-            self.saveError(e)
 
     def saveError(self, err, is_os_error: bool = False) -> None:
         if not is_os_error:
-            if not self.sd:
-                with open("error.txt", "w") as f:
-                    f.write(f"Error: {err}")
-            else:
-                try:
-                    self.sd.write("error.txt", f"Error: {err}")
-                except Exception as e:
-                    print(e)
-                    with open("error.txt", "w") as f:
-                        f.write(f"Error: {err}")
+            with open("error.txt", "w") as f:
+                f.write(f"Error: {err}")
         else:
             if err.errno == errno.ENOENT:
                 reason = "File or directory not found."
@@ -75,60 +48,39 @@ class FlipperHTTP:
             else:
                 reason = str(err)
 
-            if not self.sd:
-                with open("error.txt", "w") as f:
-                    f.write(f"OSError: {reason}")
-            else:
-                try:
-                    self.sd.write("error.txt", f"OSError: {reason}")
-                except Exception as e:
-                    print(e)
-                    with open("error.txt", "w") as f:
-                        f.write(f"OSError: {reason}")
+            with open("error.txt", "w") as f:
+                f.write(f"OSError: {reason}")
 
     def setup(self) -> None:
         """Start UART and load the WiFi credentials"""
-        self.uart = UART(0, baudrate=self.BAUD_RATE, tx=Pin(0), rx=Pin(1))
-        self.uart.init()
+        self.uart = serial.Serial("/dev/serial0", self.BAUD_RATE)
         self.use_led = True
-        self.ledStart()
         self.loadWifiSettings()
         self.flush()
 
-    def ledAction(self, timeout: float = 0.250):
-        """Function to flash the LED"""
-        self.led.on()
-        sleep(timeout)
-        self.led.off()
-        sleep(timeout)
-
-    def ledStart(self):
-        """Display LED sequence when Wifi Board is first connected to the Flipper"""
-        self.ledAction()
-        self.ledAction()
-        self.ledAction()
-
-    def ledStatus(self) -> None:
-        if self.use_led:
-            self.led.on()
-
     def clearSerialBuffer(self) -> None:
         """Clear the serial buffer"""
-        while self.uart.any() > 0:
-            self.uart.read()
+        self.uart.reset_input_buffer()  # Clear the input buffer
+        self.uart.reset_output_buffer()  # Clear the output buffer
 
     def connectToWiFi(self) -> bool:
         if self.ssid is None or self.password is None:
             self.println("[ERROR] WiFi SSID or Password is empty.")
             return False
         try:
-            self.wlan.active(True)
-            if not self.wlan.isconnected():
-                self.wlan.connect(self.ssid, self.password)
-                while not self.wlan.isconnected():
+            if self.wlan.status() in [const.IFACE_DISCONNECTED, const.IFACE_INACTIVE]:
+                profile = pywifi.Profile()
+                profile.ssid = self.ssid
+                profile.auth = pywifi.const.AUTH_ALG_OPEN
+                profile.akm.append(pywifi.const.AKM_TYPE_WPA2PSK)
+                profile.cipher = pywifi.const.CIPHER_TYPE_CCMP
+                profile.key = self.password
+                self.wlan.connect(profile)
+
+                while not self.wlan.status() == const.IFACE_CONNECTED:
                     self.uart.write(".")
                     sleep(0.5)
-            if self.wlan.isconnected():
+            if self.wlan.status() == const.IFACE_CONNECTED:
                 self.println("[SUCCESS] Successfully connected to Wifi.")
                 self.local_ip = self.wlan.ifconfig()[0]
                 return True
@@ -138,12 +90,12 @@ class FlipperHTTP:
             return False
 
     def isConnectedToWiFi(self) -> bool:
-        return self.wlan.isconnected()
+        return self.wlan.status() == const.IFACE_CONNECTED
 
     def saveWifiSettings(self, jsonData: str) -> bool:
         try:
             # Parse JSON data
-            data = ujson.loads(jsonData)
+            data = json.loads(jsonData)
             new_ssid = data.get("ssid")
             new_password = data.get("password")
 
@@ -153,16 +105,8 @@ class FlipperHTTP:
 
             # Load existing settings
             try:
-                if not self.sd:
-                    with open("flipper-http.json", "r") as f:
-                        settings = ujson.loads(f.read())
-                else:
-                    try:
-                        settings = ujson.loads(self.sd.read("flipper-http.json"))
-                    except Exception as e:
-                        print(e)
-                        with open("flipper-http.json", "r") as f:
-                            settings = ujson.loads(f.read())
+                with open("flipper-http.json", "r") as f:
+                    settings = json.loads(f.read())
             except OSError as e:
                 if e.errno == errno.ENOENT:
                     settings = {"wifi_list": []}  # Initialize if file doesn't exist
@@ -188,16 +132,8 @@ class FlipperHTTP:
 
                 # Save updated settings to file
                 try:
-                    if not self.sd:
-                        with open("flipper-http.json", "w") as f:
-                            f.write(ujson.dumps(settings))
-                    else:
-                        try:
-                            self.sd.write("flipper-http.json", ujson.dumps(settings))
-                        except Exception as e:
-                            print(e)
-                            with open("flipper-http.json", "w") as f:
-                                f.write(ujson.dumps(settings))
+                    with open("flipper-http.json", "w") as f:
+                        f.write(json.dumps(settings))
                     self.println("[SUCCESS] Settings saved.")
                     self.ssid = new_ssid
                     self.password = new_password
@@ -217,23 +153,14 @@ class FlipperHTTP:
 
     def loadWifiSettings(self) -> bool:
         try:
-            # Open the settings file and read content
-            if not self.sd:
-                with open("flipper-http.json", "r") as f:
-                    file_content = f.read()
-            else:
-                try:
-                    file_content = self.sd.read("flipper-http.json")
-                except Exception as e:
-                    print(e)
-                    with open("flipper-http.json", "r") as f:
-                        file_content = f.read
+            with open("flipper-http.json", "r") as f:
+                file_content = f.read()
 
             if not file_content:
                 return False
 
             # Parse JSON content
-            settings = ujson.loads(file_content)
+            settings = json.loads(file_content)
             wifi_list = settings.get("wifi_list", [])
 
             # Try each WiFi configuration in the list
@@ -261,107 +188,51 @@ class FlipperHTTP:
             self.saveError(f"Failed to load or parse settings file: {e}")
             return False
 
-    def get(self, url, headers=None, stream=None, uart=None) -> Response:
+    def get(self, url, headers=None) -> requests.Response:
         if not self.isConnectedToWiFi() and not self.connectToWiFi():
             return None
-        if headers:
-            headers["User-Agent"] = "Pico"  # for FlipSocial app
-            if not stream:
-                return requests.get(url=url, headers=headers)
-            return requests.get(url=url, headers=headers, stream=stream, uart=uart)
-        headers = {"User-Agent": "Pico"}  # for FlipSocial app
-        if not stream:
-            return requests.get(url=url, headers=headers)
-        return requests.get(url=url, stream=stream, uart=uart, headers=headers)
+        return requests.get(url, headers=headers)
 
-    def post(self, url, payload, headers=None, stream=None, uart=None) -> Response:
+    def post(self, url, payload, headers=None) -> requests.Response:
         if not self.isConnectedToWiFi() and not self.connectToWiFi():
             return None
         if payload is None:
             return None
         if isinstance(payload, (str, bytes)):
-            if headers:
-                headers["User-Agent"] = "Pico"  # for FlipSocial app
-                if not stream:
-                    return requests.post(url, headers=headers, data=payload)
-                return requests.post(
-                    url, headers=headers, data=payload, stream=stream, uart=uart
-                )
-            headers = {"User-Agent": "Pico"}  # for FlipSocial app
-            if not stream:
-                return requests.post(url, data=payload, headers=headers)
-            return requests.post(
-                url, data=payload, stream=stream, uart=uart, headers=headers
-            )
-        if headers:
-            headers["User-Agent"] = "Pico"  # for FlipSocial app
-            if not stream:
-                return requests.post(
-                    url, headers=headers, json_data=ujson.dumps(payload)
-                )
-            return requests.post(
-                url,
-                headers=headers,
-                json_data=ujson.dumps(payload),
-                stream=stream,
-                uart=uart,
-            )
-        headers = {"User-Agent": "Pico"}  # for FlipSocial app
-        if not stream:
-            return requests.post(url, json_data=ujson.dumps(payload), headers=headers)
-        return requests.post(
-            url,
-            json_data=ujson.dumps(payload),
-            stream=stream,
-            uart=uart,
-            headers=headers,
-        )
+            return requests.post(url, headers=headers, data=payload)
+        return requests.post(url, headers=headers, json_data=json.dumps(payload))
 
-    def put(self, url, payload, headers=None) -> Response:
+    def put(self, url, payload, headers=None) -> requests.Response:
         if not self.isConnectedToWiFi() and not self.connectToWiFi():
             return None
         if payload is None:
             return None
         if isinstance(payload, (str, bytes)):
-            if headers:
-                return requests.put(url, headers=headers, data=payload)
-            return requests.put(url, data=payload)
-        if headers:
-            return requests.put(url, headers=headers, json_data=ujson.dumps(payload))
-        return requests.put(url, json_data=ujson.dumps(payload))
+            return requests.put(url, headers=headers, data=payload)
+        return requests.put(url, headers=headers, json_data=json.dumps(payload))
 
-    def delete(self, url, headers=None) -> Response:
+    def delete(self, url, headers=None) -> requests.Response:
         if not self.isConnectedToWiFi() and not self.connectToWiFi():
             return None
-        if headers:
-            return requests.delete(url, headers=headers)
-        return requests.delete(url)
+        return requests.delete(url, headers=headers)
 
-    def head(self, url, payload, headers=None) -> Response:
+    def head(self, url, payload, headers=None) -> requests.Response:
         if not self.isConnectedToWiFi() and not self.connectToWiFi():
             return None
         if payload is None:
             return None
         if isinstance(payload, (str, bytes)):
-            if headers:
-                return requests.head(url, headers=headers, data=payload)
-            return requests.head(url, data=payload)
-        if headers:
-            return requests.head(url, headers=headers, json_data=ujson.dumps(payload))
-        return requests.head(url, json_data=ujson.dumps(payload))
+            return requests.head(url, headers=headers, data=payload)
+        return requests.head(url, headers=headers, json_data=json.dumps(payload))
 
-    def patch(self, url, payload, headers=None) -> Response:
+    def patch(self, url, payload, headers=None) -> requests.Response:
         if not self.isConnectedToWiFi() and not self.connectToWiFi():
             return None
         if payload is None:
             return None
         if isinstance(payload, (str, bytes)):
-            if headers:
-                return requests.patch(url, headers=headers, data=payload)
-            return requests.patch(url, data=payload)
-        if headers:
-            return requests.patch(url, headers=headers, json_data=ujson.dumps(payload))
-        return requests.patch(url, json_data=ujson.dumps(payload))
+            return requests.patch(url, headers=headers, data=payload)
+        return requests.patch(url, headers=headers, json_data=json.dumps(payload))
 
     def write(self, message: bytes):
         self.uart.write(message)
@@ -383,16 +254,16 @@ class FlipperHTTP:
         return data
 
     def readLine(self) -> str:
-        start_time = ticks_ms()
+        start_time = int(time.time_ns() / 1000000)
         message = ""
 
-        while (ticks_ms() - start_time) < self.timeout:
-            if self.uart.any() > 0:
+        while (int(time.time_ns() / 1000000) - start_time) < self.timeout:
+            if self.uart.read() > 0:
                 try:
                     raw_data = self.uart.read()
                     if raw_data:
                         # Reset the timeout when data is read
-                        start_time = ticks_ms()
+                        start_time = int(time.time_ns() / 1000000)
                         message += raw_data.decode()
 
                         if "\n" in message:
@@ -406,17 +277,13 @@ class FlipperHTTP:
 
     def loop(self):
         """Main loop to handle the serial communication"""
-        global RESPONSE_IS_BUSY
         while True:
             gc.collect()  # Run garbage collection to free up memory
             try:
-                if self.uart.any() > 0:
+                if self.uart.read() > 0:
                     data = self.readLine()
 
-                    self.ledStatus()
-
                     if not data:  # Checks for None or empty string
-                        self.led.off()
                         continue
 
                     if data.startswith("[LIST]"):
@@ -453,19 +320,19 @@ class FlipperHTTP:
 
                     # Handle [REBOOT] command
                     elif data.startswith("[REBOOT]"):
-                        machine.reset()
+                        # machine.reset()
+                        pass
 
                     # scan for wifi networks
                     elif data.startswith("[WIFI/SCAN]"):
                         try:
-                            ap = network.WLAN(network.AP_IF)
-                            ap.active(True)
-                            networks = ap.scan()
+                            self.wlan.scan()
+                            networks = self.wlan.scan_results()
                             network_data = []
-                            for w in networks:
-                                network_data.append(w[0].decode())
-                            self.println(str(network_data))
-                            ap.active(False)
+                            # list of SSIds only
+                            for network in networks:
+                                network_data.append(network.ssid)
+                            self.println(json.dumps(network_data))
                         except Exception as e:
                             self.saveError(e)
                             self.println("[ERROR] Failed to scan for WiFi networks.")
@@ -514,12 +381,11 @@ class FlipperHTTP:
                     elif data.startswith("[GET/HTTP]"):
                         # Extract the JSON by removing the command part
                         json_data = data.replace("[GET/HTTP]", "")
-                        data = ujson.loads(json_data)
+                        data = json.loads(json_data)
                         url = data["url"]
                         headers = data["headers"]
                         if not url:
                             self.println("[ERROR] JSON does not contain url.")
-                            self.led.off()
                             return  # Exit the handler if URL is missing
                         if not headers:
                             headers = None
@@ -538,7 +404,7 @@ class FlipperHTTP:
                     elif data.startswith("[POST/HTTP]"):
                         # Extract the JSON by removing the command part
                         json_data = data.replace("[POST/HTTP]", "")
-                        data = ujson.loads(json_data)
+                        data = json.loads(json_data)
                         url = data["url"]
                         headers = data["headers"]
                         payload = data["payload"]
@@ -546,7 +412,6 @@ class FlipperHTTP:
                             self.println(
                                 "[ERROR] JSON does not contain url or payload."
                             )
-                            self.led.off()
                             return  # Exit the handler if URL is missing
                         if not headers:
                             headers = None
@@ -565,7 +430,7 @@ class FlipperHTTP:
                     elif data.startswith("[PUT/HTTP]"):
                         # Extract the JSON by removing the command part
                         json_data = data.replace("[PUT/HTTP]", "")
-                        data = ujson.loads(json_data)
+                        data = json.loads(json_data)
                         url = data["url"]
                         headers = data["headers"]
                         payload = data["payload"]
@@ -573,7 +438,6 @@ class FlipperHTTP:
                             self.println(
                                 "[ERROR] JSON does not contain url or payload."
                             )
-                            self.led.off()
                             return  # Exit the handler if URL is missing
                         if not headers:
                             headers = None
@@ -592,12 +456,11 @@ class FlipperHTTP:
                     elif data.startswith("[DELETE/HTTP]"):
                         # Extract the JSON by removing the command part
                         json_data = data.replace("[DELETE/HTTP]", "")
-                        data = ujson.loads(json_data)
+                        data = json.loads(json_data)
                         url = data["url"]
                         headers = data["headers"]
                         if not url:
                             self.println("[ERROR] JSON does not contain url.")
-                            self.led.off()
                             return  # Exit the handler if URL is missing
                         if not headers:
                             headers = None
@@ -617,14 +480,14 @@ class FlipperHTTP:
                         try:
                             # Extract the JSON by removing the command part
                             json_data = data.replace("[GET/BYTES]", "")
-                            data = ujson.loads(json_data)
+                            data = json.loads(json_data)
 
                             url = data["url"]
                             headers = data.get("headers", None)
 
                             if not url:
                                 self.println("[ERROR] JSON does not contain url.")
-                                self.led.off()
+
                                 return  # Exit the handler if URL is missing
 
                             # Initialize the response variable
@@ -633,33 +496,19 @@ class FlipperHTTP:
                             # Make the GET request
                             gc.collect()
                             try:
-                                if not headers:
-                                    res = self.get(url=url, stream=True, uart=self.uart)
-                                else:
-                                    res = self.get(
-                                        url=url,
-                                        headers=headers,
-                                        stream=True,
-                                        uart=self.uart,
-                                    )
+                                res = self.get(url, headers)
                             except Exception as e:
                                 self.saveError(e)
-                                self.led.off()
                                 return
 
+                            # stream the response
                             if res is not None:
-                                if res.status_code >= 400:
-                                    self.println(
-                                        f"[ERROR] GET request failed: {res.status_code}"
-                                    )
-                                    self.led.off()
-                                    return
+                                self.println("[GET/SUCCESS] GET request successful.")
+                                for chunk in res.iter_content(chunk_size=2048):
+                                    self.uart.write(chunk)
+                                self.println("[GET/END]")
+                                self.flush()
 
-                                # Wait until res finishes sending uart
-                                while RESPONSE_IS_BUSY is True:
-                                    pass
-
-                                return
                             else:
                                 self.println(
                                     "[ERROR] GET request failed or returned empty data."
@@ -676,18 +525,17 @@ class FlipperHTTP:
                         try:
                             # Extract the JSON by removing the command part
                             json_data = data.replace("[POST/BYTES]", "")
-                            data = ujson.loads(json_data)
+                            data = json.loads(json_data)
 
                             url = data["url"]
                             headers = data.get("headers", None)
-                            payload = data.get("payload", None)
+                            payload = data["payload"]
 
-                            if not url or payload is None:
+                            if not url or not payload:
                                 self.println(
                                     "[ERROR] JSON does not contain url or payload."
                                 )
-                                self.led.off()
-                                return
+                                return  # Exit the handler if URL is missing
 
                             # Initialize the response variable
                             res = None
@@ -695,36 +543,19 @@ class FlipperHTTP:
                             # Make the POST request
                             gc.collect()
                             try:
-                                if not headers:
-                                    res = self.post(
-                                        url, payload, stream=True, uart=self.uart
-                                    )
-                                else:
-                                    res = self.post(
-                                        url=url,
-                                        payload=payload,
-                                        headers=headers,
-                                        stream=True,
-                                        uart=self.uart,
-                                    )
+                                res = self.post(url, payload, headers)
                             except Exception as e:
                                 self.saveError(e)
-                                self.led.off()
                                 return
 
+                            # stream the response
                             if res is not None:
-                                if res.status_code >= 400:
-                                    self.println(
-                                        f"[ERROR] POST request failed: {res.status_code}"
-                                    )
-                                    self.led.off()
-                                    return
+                                self.println("[POST/SUCCESS] POST request successful.")
+                                for chunk in res.iter_content(chunk_size=2048):
+                                    self.uart.write(chunk)
+                                self.println("[POST/END]")
+                                self.flush()
 
-                                # Wait until res finishes sending uart
-                                while RESPONSE_IS_BUSY is True:
-                                    pass
-
-                                return
                             else:
                                 self.println(
                                     "[ERROR] POST request failed or returned empty data."
@@ -740,14 +571,13 @@ class FlipperHTTP:
                     elif data.startswith("[PARSE]"):
                         # Extract the JSON by removing the command part
                         json_data = data.replace("[PARSE]", "")
-                        data = ujson.loads(json_data)
-                        json = data["json"]
+                        data = json.loads(json_data)
+                        json_edit = data["json"]
                         key = data["key"]
-                        if not json or not key:
+                        if not json_edit or not key:
                             self.println("[ERROR] JSON does not contain key or json.")
-                            self.led.off()
                             return
-                        res = ujson.loads(json)
+                        res = json.loads(json_edit)
                         if res is not None:
                             found_key = res.get(key)
                             if found_key:
@@ -763,17 +593,16 @@ class FlipperHTTP:
                     elif data.startswith("[PARSE/ARRAY]"):
                         # Extract the JSON by removing the command part
                         json_data = data.replace("[PARSE/ARRAY]", "")
-                        data = ujson.loads(json_data)
-                        json = data["json"]
+                        data = json.loads(json_data)
+                        json_edit = data["json"]
                         key = data["key"]
                         index = data["index"]
-                        if not json or not key or not index:
+                        if not json_edit or not key or not index:
                             self.println(
                                 "[ERROR] JSON does not contain key, index or json."
                             )
-                            self.led.off()
                             return
-                        res = ujson.loads(json)
+                        res = json.loads(json_edit)
                         if res is not None:
                             found_key = res.get(key)
                             if found_key:
@@ -784,10 +613,10 @@ class FlipperHTTP:
                             self.println(
                                 "[ERROR] JSON parsing failed or key not found."
                             )
-
-                    self.led.off()
+            except KeyboardInterrupt:
+                self.uart.close()
+                break
             except Exception as e:
                 self.saveError(e)
                 self.println(f"[ERROR] {e}")
-                self.led.off()
                 continue
