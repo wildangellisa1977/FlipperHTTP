@@ -14,7 +14,6 @@ import time
 from time import sleep
 import errno
 import requests
-import gc
 import serial
 import pywifi  # pip install pywifi (only for Linux/Windows)
 from pywifi import const
@@ -53,10 +52,18 @@ class FlipperHTTP:
 
     def setup(self) -> None:
         """Start UART and load the WiFi credentials"""
-        self.uart = serial.Serial("/dev/serial0", self.BAUD_RATE)
+        self.uart = serial.Serial(
+            "/dev/serial0",
+            baudrate=self.BAUD_RATE,
+            timeout=(self.timeout / 1000),
+            parity=serial.PARITY_NONE,
+            stopbits=serial.STOPBITS_ONE,
+            bytesize=serial.SEVENBITS,
+        )
         self.use_led = True
         self.loadWifiSettings()
         self.flush()
+        self.clearSerialBuffer()
 
     def clearSerialBuffer(self) -> None:
         """Clear the serial buffer"""
@@ -238,7 +245,7 @@ class FlipperHTTP:
         self.uart.write(message)
 
     def println(self, message: str):
-        self.uart.write(message + "\n")
+        self.uart.write((message + "\n").encode("utf-8"))
 
     def flush(self):
         self.uart.flush()
@@ -248,7 +255,7 @@ class FlipperHTTP:
         try:
             raw_data = self.uart.read()
             if raw_data:  # Ensures raw_data isn't empty before decoding
-                data = raw_data.decode()
+                data = raw_data.decode("utf-8")
         except Exception as e:
             pass  # raw_data is empty/None
         return data
@@ -258,19 +265,18 @@ class FlipperHTTP:
         message = ""
 
         while (int(time.time_ns() / 1000000) - start_time) < self.timeout:
-            if self.uart.read() > 0:
-                try:
-                    raw_data = self.uart.read()
-                    if raw_data:
-                        # Reset the timeout when data is read
-                        start_time = int(time.time_ns() / 1000000)
-                        message += raw_data.decode()
+            try:
+                raw_data = self.uart.read()
+                if raw_data:  # Check if data was actually read
+                    # Reset the timeout when data is read
+                    start_time = int(time.time_ns() / 1000000)
+                    message += raw_data.decode("utf-8")  # Decode bytes to string
 
-                        if "\n" in message:
-                            message = message.strip("\n")
-                            return message
-                except Exception as e:
-                    continue
+                    if "\n" in message:  # Stop reading when a newline is encountered
+                        message = message.strip("\n")
+                        return message
+            except Exception as e:
+                continue
 
         # Timeout reached with no newline received
         return None
@@ -278,13 +284,17 @@ class FlipperHTTP:
     def loop(self):
         """Main loop to handle the serial communication"""
         while True:
-            gc.collect()  # Run garbage collection to free up memory
-            try:
-                if self.uart.read() > 0:
-                    data = self.readLine()
+            # gc.collect()  # Run garbage collection to free up memory
 
-                    if not data:  # Checks for None or empty string
+            try:
+                uart_data = self.uart.read()
+                if uart_data is None:
+                    continue
+                else:
+                    data = self.uart.readline()
+                    if data is None or data == b"":
                         continue
+                    data = data.decode("utf-8").strip()
 
                     if data.startswith("[LIST]"):
                         self.println(
