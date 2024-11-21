@@ -16,7 +16,7 @@
 13. Click on `Bootloader (0x1000)` and select the `flipper_http_bootloader_esp32_wroom.bin` that you downloaded earlier.
 14. Click on `Part Table (0x8000)` and select the `flipper_http_partitions_esp32_wroom.bin` that you downloaded earlier.
 15. Click on `FirmwareA (0x10000)` and select the `flipper_http_firmware_a_esp32_wroom.bin` that you downloaded earlier.
-16. Click on `FLASH - slow` to flash the firmware to your Developer Board. Wait until the process is complete. If successful, the LED of the Developer Board will flash GREEN three times.
-17. Lastly, on the Developer Board, press the RESET button once.
+16. Click on `FLASH - slow` to flash the firmware to your ESP32-WROOM. Wait until the process is complete. If successful, the LED of the ESP32-WROOM will flash GREEN three times.
+17. Lastly, on the ESP32-WROOM, press the RESET button once.
 
 You are all set. Here's a video tutorial: https://www.youtube.com/watch?v=AZfbrLKJMpM
