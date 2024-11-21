@@ -1,4 +1,7 @@
-// flipper_http.h
+// Description: Flipper HTTP API (For use with Flipper Zero and the FlipperHTTP flash: https://github.com/jblanked/FlipperHTTP)
+// License: MIT
+// Author: JBlanked
+// File: flipper_http.h
 #ifndef FLIPPER_HTTP_H
 #define FLIPPER_HTTP_H
 

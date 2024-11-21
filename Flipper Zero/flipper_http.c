@@ -1,3 +1,7 @@
+// Description: Flipper HTTP API (For use with Flipper Zero and the FlipperHTTP flash: https://github.com/jblanked/FlipperHTTP)
+// License: MIT
+// Author: JBlanked
+// File: flipper_http.c
 #include <flipper_http.h> // change this to where flipper_http.h is located
 FlipperHTTP fhttp;
 char rx_line_buffer[RX_LINE_BUFFER_SIZE];
