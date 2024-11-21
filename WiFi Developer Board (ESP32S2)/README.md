@@ -1,4 +1,4 @@
-## WiFi Devboard Installation
+## WiFi Developer Board Installation
 1. Install the ESP Flasher app on your Flipper Zero from the Apps catalog: https://lab.flipper.net/apps/esp_flasher
 2. Download the `flipper_http_bootloader.bin`, `flipper_http_firmware_a.bin`, and `flipper_http_partitions.bin` files.
 3. Disconnect your WiFi Developer Board and connect your Flipper Zero to your computer.
