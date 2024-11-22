@@ -2,6 +2,7 @@
 Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over serial.
+Board Manager: ESP32 Dev Module
 Created: 2024-09-30
 Updated: 2024-11-09
 
@@ -27,9 +28,7 @@ Change Log:
 #include <ArduinoJson.h>
 #include <Arduino.h>
 
-#define B_PIN 4 // Blue
-#define G_PIN 5 // Green
-#define R_PIN 6 // Red
+#define LED_PIN 2
 
 #define ON LOW
 #define OFF HIGH
@@ -114,7 +113,7 @@ public:
     }
 
     // Turn on and off the LED
-    void ledAction(int pin = G_PIN, int timeout = 250)
+    void ledAction(int pin = LED_PIN, int timeout = 250)
     {
         digitalWrite(pin, ON);
         delay(timeout);
@@ -125,12 +124,7 @@ public:
     // Display LED sequence when Wifi Board is first connected to the Flipper
     void ledStart()
     {
-        pinMode(B_PIN, OUTPUT); // Set Blue Pin mode as output
-        pinMode(G_PIN, OUTPUT); // Set Green Pin mode as output
-        pinMode(R_PIN, OUTPUT); // Set Red Pin mode as output
-
-        digitalWrite(B_PIN, OFF);
-        digitalWrite(R_PIN, OFF);
+        pinMode(LED_PIN, OUTPUT); // Set Pin mode as output
 
         ledAction();
         ledAction();
@@ -142,18 +136,14 @@ public:
     {
         if (this->useLED)
         {
-            digitalWrite(B_PIN, OFF);
-            digitalWrite(R_PIN, OFF);
-            digitalWrite(G_PIN, ON);
+            digitalWrite(LED_PIN, ON);
         }
     }
 
     // Turn off all LEDs
     void ledOff()
     {
-        digitalWrite(B_PIN, OFF);
-        digitalWrite(G_PIN, OFF);
-        digitalWrite(R_PIN, OFF);
+        digitalWrite(LED_PIN, OFF);
     }
 
     // get IP addresss
