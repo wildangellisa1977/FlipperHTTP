@@ -1,0 +1,30 @@
+# Common Issues
+If you encounter any problems flashing your board with the FlipperHTTP firmware or using any of the FlipperHTTP apps, refer to the common issues and solutions below.
+
+## FlipperHTTP Firmware
+### Issue: "Please enter bootloader mode" in the ESP Flasher app
+**Solution:**
+1. Perform a cold boot by unplugging your board completely and reconnecting it.
+2. Force bootloader mode by holding the BOOT button while connecting the board to your Flipper Zero.
+3. After receiving the message, follow these steps:
+   - Exit to the main menu of the ESP Flasher app.
+   - Disconnect your board and reconnect it.
+   - Click `Enter Bootloader`, then return to `Manual Flash` and proceed with the flashing steps.
+
+---
+
+## FlipperHTTP Apps
+### Issue: "WiFi devboard is disconnected"
+**Solution:**
+1. Check your WiFi settings in the app and re-save them.
+2. Restart the app.
+3. Exit the app, disconnect the board, reconnect it, and try using the app again.
+4. If the above steps don’t resolve the issue:
+   - Open the `UART Terminal` app and click `Open Port`.
+   - Look for error messages like `wrong chip` or `load 0x400..`.
+   - If such messages appear, the installed firmware is incompatible with your board. 
+   - Report the issue in the repository's `Issues` section. Make sure to include every step you followed (leave no details out).
+
+### Issue: "Failed to receive data" in every app
+**Solution:**
+1. Update your WiFi credentials in the `Settings` menu option of each app (except FlipWiFi). Verify that you are connecting to a 2.4 GHz network. Supported boards do not support 5 GHz networks.
