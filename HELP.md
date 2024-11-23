@@ -1,5 +1,5 @@
 # Common Issues
-If you encounter any problems flashing your board with the FlipperHTTP firmware or using any of the FlipperHTTP apps, refer to the common issues and solutions below.
+If you encounter any problems flashing your board with the FlipperHTTP firmware or using any of the FlipperHTTP apps, refer to the common issues and solutions below. If your issue is not addressed below, report the issue in the repository's `Issues` section.
 
 ## FlipperHTTP Firmware
 ### Issue: "Please enter bootloader mode" in the ESP Flasher app
