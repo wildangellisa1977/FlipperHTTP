@@ -13,6 +13,10 @@ class EasySD:
         mosi_gpio: int = 15,  # GPIO 15
         auto_mount: bool = False,
     ):
+        self.sd = None
+        self.cs = None
+        self.is_mounted = False
+        self.auto_mount = False
         try:
             self.spi = SPI(
                 1, sck=Pin(sck_gpio), mosi=Pin(mosi_gpio), miso=Pin(miso_gpio)
@@ -23,7 +27,6 @@ class EasySD:
             self.is_mounted = self.mount() if auto_mount else False
         except Exception as e:
             print(f"Failed to initialize SPI or SD card: {e}")
-            self.is_mounted = False
             return None
 
     def os_error(self, err: OSError) -> str:
@@ -500,3 +503,5 @@ class SDCard:
     def ioctl(self, op, arg):
         if op == 4:  # get number of blocks
             return self.sectors
+
+
