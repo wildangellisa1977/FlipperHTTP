@@ -49,7 +49,8 @@ class FlipperHTTP:
         try:
             self.sd = EasySD(auto_mount=True)
         except Exception as e:
-            self.saveError(e)
+            # No worries, SD card is optional
+            self.sd = None
 
     def saveError(self, err, is_os_error: bool = False) -> None:
         if not is_os_error:
@@ -60,7 +61,6 @@ class FlipperHTTP:
                 try:
                     self.sd.write("error.txt", f"Error: {err}")
                 except Exception as e:
-                    print(e)
                     with open("error.txt", "w") as f:
                         f.write(f"Error: {err}")
         else:
@@ -82,7 +82,6 @@ class FlipperHTTP:
                 try:
                     self.sd.write("error.txt", f"OSError: {reason}")
                 except Exception as e:
-                    print(e)
                     with open("error.txt", "w") as f:
                         f.write(f"OSError: {reason}")
 
@@ -160,7 +159,6 @@ class FlipperHTTP:
                     try:
                         settings = ujson.loads(self.sd.read("flipper-http.json"))
                     except Exception as e:
-                        print(e)
                         with open("flipper-http.json", "r") as f:
                             settings = ujson.loads(f.read())
             except OSError as e:
@@ -195,7 +193,6 @@ class FlipperHTTP:
                         try:
                             self.sd.write("flipper-http.json", ujson.dumps(settings))
                         except Exception as e:
-                            print(e)
                             with open("flipper-http.json", "w") as f:
                                 f.write(ujson.dumps(settings))
                     self.println("[SUCCESS] Settings saved.")
@@ -225,7 +222,6 @@ class FlipperHTTP:
                 try:
                     file_content = self.sd.read("flipper-http.json")
                 except Exception as e:
-                    print(e)
                     with open("flipper-http.json", "r") as f:
                         file_content = f.read
 
