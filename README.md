@@ -14,6 +14,8 @@ The following apps integrate FlipperHTTP to enhance their functionality:
 - **FlipTrader** - Uses WiFi to fetch stock and currency pair prices on your Flipper Zero: [https://github.com/jblanked/FlipTrader](https://github.com/jblanked/FlipTrader)
 - **FlipWiFi** - A FlipperHTTP companion app for scanning and saving WiFi networks on your Flipper Zero: [https://github.com/jblanked/FlipWiFi](https://github.com/jblanked/FlipWiFi)
 
+Video tutorial of all 7 apps: https://www.youtube.com/watch?v=xR1ZbpOVTwE
+
 ## Installation
 The FlipperHTTP firmware supports eight boards. Instructions for each board can be found below:
 
