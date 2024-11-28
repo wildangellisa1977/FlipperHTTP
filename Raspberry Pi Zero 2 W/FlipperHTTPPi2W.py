@@ -3,10 +3,11 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over serial.
 Created: 2024-11-20
-Updated: 2024-11-20
+Updated: 2024-11-29
 
 Change Log:
 - 2024-11-20: Initial commit
+- 2024-11-29: Removed WiFi and LED functions, and updated HTTP functions
 """
 
 import json
@@ -23,7 +24,6 @@ class FlipperHTTP:
         self.wifi_ip = None
         self.ssid = None
         self.password = None
-        self.use_led = True
         self.timeout = 2000  # milliseconds
         self.uart = None
         self.BAUD_RATE = 115200
@@ -57,7 +57,6 @@ class FlipperHTTP:
             stopbits=serial.STOPBITS_ONE,
             bytesize=serial.EIGHTBITS,
         )
-        self.use_led = True
         self.flush()
         self.clearSerialBuffer()
 
@@ -166,11 +165,11 @@ class FlipperHTTP:
 
                     # handle [LED/ON] command
                     elif data.startswith("[LED/ON]"):
-                        self.use_led = True
+                        pass
 
                     # handle [LED/OFF] command
                     elif data.startswith("[LED/OFF]"):
-                        self.use_led = False
+                        pass
 
                     # handle [IP/ADDRESS] command (local IP)
                     elif data.startswith("[IP/ADDRESS]"):
