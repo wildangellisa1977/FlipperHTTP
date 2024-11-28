@@ -11,18 +11,14 @@ Change Log:
 
 import json
 import time
-from time import sleep
 import errno
 import requests
 import serial
-import pywifi  # pip install pywifi (only for Linux/Windows)
-from pywifi import const
 
 
 class FlipperHTTP:
     def __init__(self):
         self.local_ip = None
-        self.wlan = pywifi.PyWiFi().interfaces()[0]
         self.wifi_ip = None
         self.ssid = None
         self.password = None
@@ -61,7 +57,6 @@ class FlipperHTTP:
             bytesize=serial.EIGHTBITS,
         )
         self.use_led = True
-        self.loadWifiSettings()
         self.flush()
         self.clearSerialBuffer()
 
@@ -70,139 +65,10 @@ class FlipperHTTP:
         self.uart.reset_input_buffer()  # Clear the input buffer
         self.uart.reset_output_buffer()  # Clear the output buffer
 
-    def connectToWiFi(self) -> bool:
-        if self.ssid is None or self.password is None:
-            self.println("[ERROR] WiFi SSID or Password is empty.")
-            return False
-        try:
-            if self.wlan.status() in [const.IFACE_DISCONNECTED, const.IFACE_INACTIVE]:
-                profile = pywifi.Profile()
-                profile.ssid = self.ssid
-                profile.auth = pywifi.const.AUTH_ALG_OPEN
-                profile.akm.append(pywifi.const.AKM_TYPE_WPA2PSK)
-                profile.cipher = pywifi.const.CIPHER_TYPE_CCMP
-                profile.key = self.password
-                self.wlan.connect(profile)
-
-                while not self.wlan.status() == const.IFACE_CONNECTED:
-                    self.uart.write(".")
-                    sleep(0.5)
-            if self.wlan.status() == const.IFACE_CONNECTED:
-                self.println("[SUCCESS] Successfully connected to Wifi.")
-                self.local_ip = self.wlan.ifconfig()[0]
-                return True
-        except Exception as e:
-            self.saveError(e)
-            self.println("[ERROR] Failed to connect to Wifi.")
-            return False
-
-    def isConnectedToWiFi(self) -> bool:
-        return self.wlan.status() == const.IFACE_CONNECTED
-
-    def saveWifiSettings(self, jsonData: str) -> bool:
-        try:
-            # Parse JSON data
-            data = json.loads(jsonData)
-            new_ssid = data.get("ssid")
-            new_password = data.get("password")
-
-            if not new_ssid or not new_password:
-                self.println("[ERROR] SSID or Password is empty.")
-                return False
-
-            # Load existing settings
-            try:
-                with open("flipper-http.json", "r") as f:
-                    settings = json.loads(f.read())
-            except OSError as e:
-                if e.errno == errno.ENOENT:
-                    settings = {"wifi_list": []}  # Initialize if file doesn't exist
-                else:
-                    self.saveError(e, True)
-                    return False
-            except Exception as e:
-                self.println(f"[ERROR] Failed to load existing settings: {e}")
-                return False
-
-            # Check if SSID already exists in the list
-            found = False
-            for wifi in settings.get("wifi_list", []):
-                if wifi.get("ssid") == new_ssid:
-                    found = True
-                    break
-
-            # Add new SSID and password if not found
-            if not found:
-                settings["wifi_list"].append(
-                    {"ssid": new_ssid, "password": new_password}
-                )
-
-                # Save updated settings to file
-                try:
-                    with open("flipper-http.json", "w") as f:
-                        f.write(json.dumps(settings))
-                    self.println("[SUCCESS] Settings saved.")
-                    self.ssid = new_ssid
-                    self.password = new_password
-                    return True
-                except Exception as e:
-                    self.println(f"[ERROR] Failed to open file for writing: {e}")
-                    return False
-
-            self.ssid = new_ssid
-            self.password = new_password
-            self.println("[INFO] SSID already exists in settings.")
-            return True
-
-        except ValueError:
-            self.println("[ERROR] Failed to parse JSON data.")
-            return False
-
-    def loadWifiSettings(self) -> bool:
-        try:
-            with open("flipper-http.json", "r") as f:
-                file_content = f.read()
-
-            if not file_content:
-                return False
-
-            # Parse JSON content
-            settings = json.loads(file_content)
-            wifi_list = settings.get("wifi_list", [])
-
-            # Try each WiFi configuration in the list
-            for wifi in wifi_list:
-                self.ssid = wifi.get("ssid")
-                self.password = wifi.get("password")
-
-                if not self.ssid or not self.password:
-                    continue  # Skip if missing SSID or password
-
-                self.connectToWiFi()
-
-                # Retry connection for up to 4 attempts, with 500ms delay each
-                attempts = 0
-                while not self.isConnectedToWiFi() and attempts < 4:
-                    sleep(0.5)
-                    self.uart.write(".")
-                    attempts += 1
-
-                if self.isConnectedToWiFi():
-                    return True
-            return False
-
-        except (OSError, ValueError) as e:
-            self.saveError(f"Failed to load or parse settings file: {e}")
-            return False
-
     def get(self, url, headers=None) -> requests.Response:
-        if not self.isConnectedToWiFi() and not self.connectToWiFi():
-            return None
         return requests.get(url, headers=headers)
 
     def post(self, url, payload, headers=None) -> requests.Response:
-        if not self.isConnectedToWiFi() and not self.connectToWiFi():
-            return None
         if payload is None:
             return None
         if isinstance(payload, (str, bytes)):
@@ -210,8 +76,6 @@ class FlipperHTTP:
         return requests.post(url, headers=headers, json_data=json.dumps(payload))
 
     def put(self, url, payload, headers=None) -> requests.Response:
-        if not self.isConnectedToWiFi() and not self.connectToWiFi():
-            return None
         if payload is None:
             return None
         if isinstance(payload, (str, bytes)):
@@ -219,13 +83,9 @@ class FlipperHTTP:
         return requests.put(url, headers=headers, json_data=json.dumps(payload))
 
     def delete(self, url, headers=None) -> requests.Response:
-        if not self.isConnectedToWiFi() and not self.connectToWiFi():
-            return None
         return requests.delete(url, headers=headers)
 
     def head(self, url, payload, headers=None) -> requests.Response:
-        if not self.isConnectedToWiFi() and not self.connectToWiFi():
-            return None
         if payload is None:
             return None
         if isinstance(payload, (str, bytes)):
@@ -233,8 +93,6 @@ class FlipperHTTP:
         return requests.head(url, headers=headers, json_data=json.dumps(payload))
 
     def patch(self, url, payload, headers=None) -> requests.Response:
-        if not self.isConnectedToWiFi() and not self.connectToWiFi():
-            return None
         if payload is None:
             return None
         if isinstance(payload, (str, bytes)):
@@ -341,45 +199,6 @@ class FlipperHTTP:
                     elif data.startswith("[REBOOT]"):
                         # machine.reset()
                         pass
-
-                    # scan for wifi networks
-                    elif data.startswith("[WIFI/SCAN]"):
-                        try:
-                            self.wlan.scan()
-                            networks = self.wlan.scan_results()
-                            network_data = []
-                            # list of SSIds only
-                            for network in networks:
-                                network_data.append(network.ssid)
-                            self.println(json.dumps(network_data))
-                        except Exception as e:
-                            self.saveError(e)
-                            self.println("[ERROR] Failed to scan for WiFi networks.")
-
-                    # Handle [WIFI/SAVE] command
-                    elif data.startswith("[WIFI/SAVE]"):
-                        # Extract the JSON by removing the command part
-                        json_data = data.replace("[WIFI/SAVE]", "")
-                        if self.saveWifiSettings(json_data):
-                            self.println("[SUCCESS] Saved WiFi settings.")
-                        else:
-                            self.println("[ERROR] Failed to save WiFi settings.")
-
-                    # Handle [WIFI/CONNECT] command
-                    elif data.startswith("[WIFI/CONNECT]"):
-                        if not self.isConnectedToWiFi():
-                            self.connectToWiFi()
-                            if self.isConnectedToWiFi():
-                                self.println("[SUCCESS] Connected to WiFi")
-                            else:
-                                self.println("[ERROR] Failed to connect to Wifi.")
-                        else:
-                            self.println("[INFO] Already connected to WiFi")
-
-                    # Handle [WIFI/DISCONNECT] command
-                    elif data.startswith("[WIFI/DISCONNECT]"):
-                        self.wlan.disconnect()
-                        self.println("[DISCONNECTED] Wifi has been disconnected.")
 
                     # Handle [GET] command
                     elif data.startswith("[GET]"):
@@ -513,7 +332,6 @@ class FlipperHTTP:
                             res = None
 
                             # Make the GET request
-                            gc.collect()
                             try:
                                 res = self.get(url, headers)
                             except Exception as e:
@@ -560,7 +378,6 @@ class FlipperHTTP:
                             res = None
 
                             # Make the POST request
-                            gc.collect()
                             try:
                                 res = self.post(url, payload, headers)
                             except Exception as e:
