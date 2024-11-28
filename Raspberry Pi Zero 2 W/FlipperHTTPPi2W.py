@@ -287,14 +287,17 @@ class FlipperHTTP:
             # gc.collect()  # Run garbage collection to free up memory
 
             try:
-                uart_data = self.uart.read()
+                uart_data = self.uart.readline()
                 if uart_data is None:
                     continue
                 else:
-                    data = self.uart.readline()
-                    if data is None or data == b"":
+
+                    if uart_data is None or uart_data == b"":
                         continue
-                    data = data.decode("utf-8").strip()
+                    data = uart_data.decode("utf-8").strip()
+
+                    if "\n" in data:
+                        data = data.strip("\n")
 
                     if data.startswith("[LIST]"):
                         self.println(
