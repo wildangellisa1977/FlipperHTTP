@@ -14,6 +14,7 @@ import time
 import errno
 import requests
 import serial
+import gc
 
 
 class FlipperHTTP:
@@ -148,16 +149,11 @@ class FlipperHTTP:
     def loop(self):
         """Main loop to handle the serial communication"""
         while True:
-            # gc.collect()  # Run garbage collection to free up memory
+            gc.collect()  # Run garbage collection to free up memory
 
             try:
                 uart_data = self.uart.readline()
-                if uart_data is None:
-                    continue
-                else:
-
-                    if uart_data is None or uart_data == b"":
-                        continue
+                if uart_data is not None and uart_data != b"":  # Check if data was read
                     data = uart_data.decode("utf-8").strip()
 
                     if "\n" in data:
@@ -209,6 +205,7 @@ class FlipperHTTP:
                             self.println("[GET/SUCCESS] GET request successful.")
                             self.println(res.text)
                             self.flush()
+                            self.println("")
                             self.println("[GET/END]")
                         else:
                             self.println(
@@ -232,6 +229,7 @@ class FlipperHTTP:
                             self.println("[GET/SUCCESS] GET request successful.")
                             self.println(res.text)
                             self.flush()
+                            self.println("")
                             self.println("[GET/END]")
                         else:
                             self.println(
@@ -258,6 +256,7 @@ class FlipperHTTP:
                             self.println("[POST/SUCCESS] POST request successful.")
                             self.println(res.text)
                             self.flush()
+                            self.println("")
                             self.println("[POST/END]")
                         else:
                             self.println(
@@ -284,6 +283,7 @@ class FlipperHTTP:
                             self.println("[PUT/SUCCESS] PUT request successful.")
                             self.println(res.text)
                             self.flush()
+                            self.println("")
                             self.println("[PUT/END]")
                         else:
                             self.println(
@@ -307,6 +307,7 @@ class FlipperHTTP:
                             self.println("[DELETE/SUCCESS] DELETE request successful.")
                             self.println(res.text)
                             self.flush()
+                            self.println("")
                             self.println("[DELETE/END]")
                         else:
                             self.println(
@@ -336,16 +337,24 @@ class FlipperHTTP:
                                 res = self.get(url, headers)
                             except Exception as e:
                                 self.saveError(e)
+                                print(e)
                                 return
 
                             # stream the response
                             if res is not None:
                                 self.println("[GET/SUCCESS] GET request successful.")
-                                for chunk in res.iter_content(chunk_size=2048):
-                                    self.uart.write(chunk)
-                                self.println("[GET/END]")
-                                self.flush()
 
+                                for chunk in res.iter_content(chunk_size=2048):
+                                    chunks_sent = self.uart.write(chunk)
+                                    if chunks_sent != len(chunk):
+                                        self.saveError("Failed to send chunk.")
+                                        print("Failed to send chunk.")
+                                        break
+                                    self.flush()
+
+                                self.flush()
+                                self.println("")
+                                self.println("[GET/END]")
                             else:
                                 self.println(
                                     "[ERROR] GET request failed or returned empty data."
@@ -382,16 +391,23 @@ class FlipperHTTP:
                                 res = self.post(url, payload, headers)
                             except Exception as e:
                                 self.saveError(e)
+                                print(e)
                                 return
 
                             # stream the response
                             if res is not None:
                                 self.println("[POST/SUCCESS] POST request successful.")
                                 for chunk in res.iter_content(chunk_size=2048):
-                                    self.uart.write(chunk)
-                                self.println("[POST/END]")
-                                self.flush()
+                                    chunks_sent = self.uart.write(chunk)
+                                    if chunks_sent != len(chunk):
+                                        self.saveError("Failed to send chunk.")
+                                        print("Failed to send chunk.")
+                                        break
+                                    self.flush()
 
+                                self.flush()
+                                self.println("")
+                                self.println("[POST/END]")
                             else:
                                 self.println(
                                     "[ERROR] POST request failed or returned empty data."
