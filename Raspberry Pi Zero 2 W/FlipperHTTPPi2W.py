@@ -58,7 +58,7 @@ class FlipperHTTP:
             timeout=(self.timeout / 1000),
             parity=serial.PARITY_NONE,
             stopbits=serial.STOPBITS_ONE,
-            bytesize=serial.SEVENBITS,
+            bytesize=serial.EIGHTBITS,
         )
         self.use_led = True
         self.loadWifiSettings()
@@ -244,8 +244,14 @@ class FlipperHTTP:
     def write(self, message: bytes):
         self.uart.write(message)
 
-    def println(self, message: str):
-        self.uart.write((message + "\n").encode("utf-8"))
+    def println(self, message: str) -> bool:
+        encoded_message = (message + "\n").encode("utf-8")
+        bytes_sent = self.uart.write(encoded_message)
+        is_sent = bytes_sent == len(encoded_message)
+        if not is_sent:
+            self.saveError("Failed to send message.")
+            print("Failed to send message.")
+        return is_sent
 
     def flush(self):
         self.uart.flush()
