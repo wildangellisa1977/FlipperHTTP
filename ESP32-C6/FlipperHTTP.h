@@ -27,13 +27,20 @@ Change Log:
 #include "SPIFFS.h"
 #include <ArduinoJson.h>
 #include <Arduino.h>
+#include <Adafruit_NeoPixel.h>
 
-#define B_PIN 4 // Blue
-#define G_PIN 5 // Green
-#define R_PIN 6 // Red
+constexpr uint8_t LED_PIN = 10;
+constexpr uint8_t NUM_LEDS = 1;
 
-#define ON LOW
-#define OFF HIGH
+Adafruit_NeoPixel rgbLed(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
+
+struct RGB
+{
+    uint8_t r, g, b;
+};
+
+constexpr RGB COLOR_OFF = {0, 0, 0};
+constexpr RGB COLOR_GREEN = {0, 255, 0};
 
 class FlipperHTTP
 {
@@ -115,23 +122,21 @@ public:
     }
 
     // Turn on and off the LED
-    void ledAction(int pin = G_PIN, int timeout = 250)
+    void ledAction(int timeout = 250)
     {
-        digitalWrite(pin, ON);
+        rgbLed.setPixelColor(0, rgbLed.Color(COLOR_GREEN.r, COLOR_GREEN.g, COLOR_GREEN.b));
+        rgbLed.show();
         delay(timeout);
-        digitalWrite(pin, OFF);
+        rgbLed.setPixelColor(0, rgbLed.Color(COLOR_OFF.r, COLOR_OFF.g, COLOR_OFF.b));
+        rgbLed.show();
         delay(timeout);
     }
 
     // Display LED sequence when Wifi Board is first connected to the Flipper
     void ledStart()
     {
-        pinMode(B_PIN, OUTPUT); // Set Blue Pin mode as output
-        pinMode(G_PIN, OUTPUT); // Set Green Pin mode as output
-        pinMode(R_PIN, OUTPUT); // Set Red Pin mode as output
-
-        digitalWrite(B_PIN, OFF);
-        digitalWrite(R_PIN, OFF);
+        rgbLed.begin();
+        rgbLed.show();
 
         ledAction();
         ledAction();
@@ -143,18 +148,16 @@ public:
     {
         if (this->useLED)
         {
-            digitalWrite(B_PIN, OFF);
-            digitalWrite(R_PIN, OFF);
-            digitalWrite(G_PIN, ON);
+            rgbLed.setPixelColor(0, rgbLed.Color(COLOR_GREEN.r, COLOR_GREEN.g, COLOR_GREEN.b));
+            rgbLed.show();
         }
     }
 
     // Turn off all LEDs
     void ledOff()
     {
-        digitalWrite(B_PIN, OFF);
-        digitalWrite(G_PIN, OFF);
-        digitalWrite(R_PIN, OFF);
+        rgbLed.setPixelColor(0, rgbLed.Color(COLOR_OFF.r, COLOR_OFF.g, COLOR_OFF.b));
+        rgbLed.show();
     }
 
     // get IP addresss
