@@ -16,7 +16,7 @@ The following apps integrate FlipperHTTP to enhance their functionality:
 
 A comprehensive video tutorial demonstrating the functionality of all seven applications is available at the following link: https://www.youtube.com/watch?v=xR1ZbpOVTwE
 
-All seven applications are available for download at the following link: https://www.flipsocial.net/download/ (or by clicking on the repository link directly to the Flipper Catalog link).
+All seven applications are available for download at the following link: https://www.flipsocial.net/download/ (or by clicking on the repository link above).
 
 
 ## Installation
