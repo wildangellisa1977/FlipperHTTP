@@ -20,8 +20,8 @@ If you encounter any problems flashing your board with the FlipperHTTP firmware 
 1. Check your WiFi settings in the app and re-save them.
 2. Restart the app.
 3. Exit the app, disconnect the board, reconnect it, and try using the app again.
-4. If the above steps don’t resolve the issue:
-   - Open the `UART Terminal` app and click `Open Port`.
+4. If the above solutions don’t resolve the issue:
+   - Open the `UART Terminal` app and click `Open Port`. Change the Baud Rate to `115200`.
    - Look for error messages like `wrong chip` or `load 0x400..`.
    - If such messages appear, the installed firmware is incompatible with your board. 
    - If you sure you installed the correct firmware then report the issue in the repository's `Issues` section. Make sure to include every step you followed (leave no details out).
