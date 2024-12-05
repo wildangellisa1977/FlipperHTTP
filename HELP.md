@@ -28,4 +28,4 @@ If you encounter any problems flashing your board with the FlipperHTTP firmware 
 
 ### Issue: "Failed to receive data" in every app
 **Solution:**
-1. Update your WiFi credentials in the `Settings` menu option of each app (except FlipWiFi). Verify that you are connecting to a 2.4 GHz network. Supported boards do not support 5 GHz networks.
+1. Update your WiFi credentials in the `Settings` menu option of each app. In the `FlipWiFi` app, this is done in the `Saved APs` option. Verify that you are connecting to a 2.4 GHz network. Supported boards do not support 5 GHz networks. 
