@@ -43,6 +43,7 @@ The FlipperHTTP firmware supports eight boards. Instructions for each board can 
 
 - **WiFi Developer Board:** [https://github.com/jblanked/FlipperHTTP/tree/main/WiFi%20Developer%20Board%20(ESP32S2)](https://github.com/jblanked/FlipperHTTP/tree/main/WiFi%20Developer%20Board%20(ESP32S2))
 - **Raspberry Pi Pico W:** [https://github.com/jblanked/FlipperHTTP/tree/main/Raspberry%20Pi%20Pico%20W](https://github.com/jblanked/FlipperHTTP/tree/main/Raspberry%20Pi%20Pico%20W)
+- **Raspberry Pi Pico 2 W:** [https://github.com/jblanked/FlipperHTTP/tree/main/Raspberry%20Pi%20Pico%202%20W](https://github.com/jblanked/FlipperHTTP/tree/main/Raspberry%20Pi%20Pico%202%20W)
 - **Raspberry Pi Zero 2 W:** [https://github.com/jblanked/FlipperHTTP/tree/main/Raspberry%20Pi%20Zero%202%20W](https://github.com/jblanked/FlipperHTTP/tree/main/Raspberry%20Pi%20Zero%202%20W)
 - **ESP32-C6:** [https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-C6](https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-C6)
 - **ESP32-Cam:** [https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-Cam](https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-Cam)
