@@ -32,8 +32,8 @@ Raspberry Pi Pico W/Pico 2 W -> Flipper
 - GND (Pin 38) -> Pin 11 (GND)
 
 Raspberry Pi Zero 2 W -> Flipper
-- TX (GPIO 14 - Pin 8) -> Pin 13 (TX)
-- RX (GPIO 15 - Pin 10) -> Pin 14 (RX)
+- TX (GPIO 14 - Pin 8) -> Pin 14 (RX)
+- RX (GPIO 15 - Pin 10) -> Pin 13 (TX)
 - GND (Pin 6) -> Pin 11 (GND)
 - Do NOT connect 3v3 or 5v (power via USB cable instead)
 
