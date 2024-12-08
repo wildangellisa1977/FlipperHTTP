@@ -7,7 +7,7 @@ Star the repository and [follow me](https://www.github.com/jblanked) for updates
 
 A video tutorial demonstrating the functionality of all seven applications: https://www.youtube.com/watch?v=xR1ZbpOVTwE
 
-Check out [Talking Sasquatch's](https://github.com/skizzophrenic) review here: https://www.youtube.com/watch?v=jYZkdz664Tg&t=4s
+Big thank you to [Talking Sasquatch](https://github.com/skizzophrenic) for his support of this project. Check out his review here: https://www.youtube.com/watch?v=jYZkdz664Tg&t=4s
 
 
 
