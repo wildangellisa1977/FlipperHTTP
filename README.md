@@ -3,11 +3,11 @@ An HTTP library for the Flipper Zero, compatible with the WiFi Developer Board, 
 
 
 
-Star the repository and [follow me](https://www.github.com/jblanked) for updates and upcoming Flipper apps.
+Star the repository and [follow me](https://www.github.com/jblanked) to stay updated on new releases and upcoming Flipper apps.
 
-A video tutorial demonstrating the functionality of all seven applications: https://www.youtube.com/watch?v=xR1ZbpOVTwE
+Check out this video tutorial showcasing the functionality of all seven applications: https://www.youtube.com/watch?v=xR1ZbpOVTwE
 
-Big thank you to [Talking Sasquatch](https://github.com/skizzophrenic) for his support of this project. Check out his review here: https://www.youtube.com/watch?v=jYZkdz664Tg&t=4s
+A big thank you to [Talking Sasquatch](https://github.com/skizzophrenic) for supporting this project. Be sure to watch his review here: https://www.youtube.com/watch?v=jYZkdz664Tg
 
 
 
