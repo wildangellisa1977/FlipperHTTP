@@ -18,6 +18,25 @@ A comprehensive video tutorial demonstrating the functionality of all seven appl
 
 All seven applications are available for download at the following link: https://www.flipsocial.net/download/ (or by clicking on the repository link above).
 
+## Wiring
+ESP32 -> Flipper
+- TX -> Pin 13 (TX)
+- RX -> Pin 14 (RX)
+- 3v3 -> Pin 9 (3v3)
+- GND -> Pin 11 (GND)
+
+Raspberry Pi Pico W/Pico 2 W -> Flipper
+- TX (GPIO 0 - Pin 1) -> Pin 13 (TX)
+- RX (GPIO 1 - Pin 2) -> Pin 14 (RX)
+- 3v3 (VSYS - Pin 39) -> Pin 9 (3v3)
+- GND (Pin 38) -> Pin 11 (GND)
+
+Raspberry Pi Zero 2 W -> Flipper
+- TX (GPIO 14 - Pin 8) -> Pin 13 (TX)
+- RX (GPIO 15 - Pin 10) -> Pin 14 (RX)
+- GND (Pin 6) -> Pin 11 (GND)
+- Do NOT connect 3v3 or 5v (power via USB cable instead)
+
 
 ## Installation
 The FlipperHTTP firmware supports eight boards. Instructions for each board can be found below:
