@@ -1,7 +1,15 @@
 # FlipperHTTP
 An HTTP library for the Flipper Zero, compatible with the WiFi Developer Board, Raspberry Pi, and other ESP32 devices. View the extended documentation here: [https://www.jblanked.com/api/FlipperHTTP/](https://www.jblanked.com/api/FlipperHTTP/).
 
+
+
 Star the repository and [follow me](https://www.github.com/jblanked) for updates and upcoming Flipper apps.
+
+A video tutorial demonstrating the functionality of all seven applications: https://www.youtube.com/watch?v=xR1ZbpOVTwE
+
+Check out [Talking Sasquatch's](https://github.com/skizzophrenic) review here: https://www.youtube.com/watch?v=jYZkdz664Tg&t=4s
+
+
 
 ## Apps That Utilize FlipperHTTP
 The following apps integrate FlipperHTTP to enhance their functionality:
@@ -14,9 +22,9 @@ The following apps integrate FlipperHTTP to enhance their functionality:
 - **FlipTrader** - Uses WiFi to fetch stock and currency pair prices on your Flipper Zero: [https://github.com/jblanked/FlipTrader](https://github.com/jblanked/FlipTrader)
 - **FlipWiFi** - A FlipperHTTP companion app for scanning and saving WiFi networks on your Flipper Zero: [https://github.com/jblanked/FlipWiFi](https://github.com/jblanked/FlipWiFi)
 
-A comprehensive video tutorial demonstrating the functionality of all seven applications is available at the following link: https://www.youtube.com/watch?v=xR1ZbpOVTwE
-
 All seven applications are available for download at the following link: https://www.flipsocial.net/download/ (or by clicking on the repository link above).
+
+
 
 ## Wiring
 ESP32 -> Flipper
