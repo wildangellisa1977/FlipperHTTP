@@ -7,9 +7,6 @@ Star the repository and [follow me](https://www.github.com/jblanked) to stay upd
 
 Check out this video tutorial showcasing the functionality of all seven applications: https://www.youtube.com/watch?v=xR1ZbpOVTwE
 
-A big thank you to [Talking Sasquatch](https://github.com/skizzophrenic) for supporting this project. Be sure to watch his review here: https://www.youtube.com/watch?v=jYZkdz664Tg
-
-
 
 ## Apps That Utilize FlipperHTTP
 The following apps integrate FlipperHTTP to enhance their functionality:
