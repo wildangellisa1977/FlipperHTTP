@@ -38,6 +38,8 @@ Raspberry Pi Pico W/Pico 2 W -> Flipper
 - RX (GPIO 1 - Pin 2) -> Pin 14 (RX)
 - 3v3 (VSYS - Pin 39) -> Pin 9 (3v3)
 - GND (Pin 38) -> Pin 11 (GND)
+- SWCLK (left debug pin) -> Pin 10 (SWC) - This is optional 
+- SWDIO (right debug pin) -> Pin 12 (SIO) - This is optional
 
 Raspberry Pi Zero 2 W -> Flipper
 - TX (GPIO 14 - Pin 8) -> Pin 14 (RX)
