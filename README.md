@@ -21,28 +21,11 @@ The following apps integrate FlipperHTTP to enhance their functionality:
 
 All seven applications are available for download at the following link: https://www.flipsocial.net/download/ (or by clicking on the repository link above).
 
+## Usage
+FlipperHTTP can be utilized by developers in Flipper Zero apps and scripts written in C, JavaScript, and MicroPython. For details, visit: [https://github.com/jblanked/FlipperHTTP/tree/main/Flipper%20Zero](https://github.com/jblanked/FlipperHTTP/tree/main/Flipper%20Zero)
 
-
-## Wiring
-ESP32 -> Flipper
-- TX -> Pin 13 (TX)
-- RX -> Pin 14 (RX)
-- 3v3 -> Pin 9 (3v3)
-- GND -> Pin 11 (GND)
-
-Raspberry Pi Pico W/Pico 2 W -> Flipper
-- TX (GPIO 0 - Pin 1) -> Pin 13 (TX)
-- RX (GPIO 1 - Pin 2) -> Pin 14 (RX)
-- 3v3 (VSYS - Pin 39) -> Pin 9 (3v3)
-- GND (Pin 38) -> Pin 11 (GND)
-- SWCLK (left debug pin) -> Pin 10 (SWC) - This is optional 
-- SWDIO (right debug pin) -> Pin 12 (SIO) - This is optional
-
-Raspberry Pi Zero 2 W -> Flipper
-- TX (GPIO 14 - Pin 8) -> Pin 14 (RX)
-- RX (GPIO 15 - Pin 10) -> Pin 13 (TX)
-- GND (Pin 6) -> Pin 11 (GND)
-- Do NOT connect 3v3 or 5v (power via USB cable instead)
+## Issues
+For common bugs and their solutions, see: [https://github.com/jblanked/FlipperHTTP/blob/main/HELP.md](https://github.com/jblanked/FlipperHTTP/blob/main/HELP.md)
 
 
 ## Installation
@@ -58,8 +41,42 @@ The FlipperHTTP firmware supports eight boards. Instructions for each board can 
 - **ESP32-WROOM:** [https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-WROOM](https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-WROOM)
 - **ESP32-WROVER:** [https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-WROVER](https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-WROVER)
 
-## Usage
-FlipperHTTP can be utilized by developers in Flipper Zero apps and scripts written in C, JavaScript, and MicroPython. For details, visit: [https://github.com/jblanked/FlipperHTTP/tree/main/Flipper%20Zero](https://github.com/jblanked/FlipperHTTP/tree/main/Flipper%20Zero)
 
-## Issues
-For common bugs and their solutions, see: [https://github.com/jblanked/FlipperHTTP/blob/main/HELP.md](https://github.com/jblanked/FlipperHTTP/blob/main/HELP.md)
+## Wiring
+ESP32 -> Flipper
+- TX -> Pin 13 (TX)
+- RX -> Pin 14 (RX)
+- 3v3 -> Pin 9 (3v3)
+- GND -> Pin 11 (GND)
+
+Raspberry Pi Pico W/Pico 2 W -> Flipper
+- TX (GPIO 0 - Pin 1) -> Pin 14 (RX)
+- RX (GPIO 1 - Pin 2) -> Pin 13 (TX)
+- 3v3 (VSYS - Pin 39) -> Pin 9 (3v3)
+- GND (Pin 38) -> Pin 11 (GND)
+- SWCLK (left debug pin) -> Pin 10 (SWC) - This is optional 
+- SWDIO (right debug pin) -> Pin 12 (SIO) - This is optional
+
+Raspberry Pi Zero 2 W -> Flipper
+- TX (GPIO 14 - Pin 8) -> Pin 14 (RX)
+- RX (GPIO 15 - Pin 10) -> Pin 13 (TX)
+- GND (Pin 6) -> Pin 11 (GND)
+- Do NOT connect 3v3 or 5v (power via USB cable instead)
+
+ESP32 -> Video Game Module
+- TX -> Pin 17 (RX)
+- RX -> Pin 16 (TX)
+- 3v3 -> 3v3
+- GND -> GND
+
+Raspberry Pi Pico W/Pico 2 W -> Video Game Module
+- TX (GPIO 0 - Pin 1) -> Pin 17 (RX)
+- RX (GPIO 1 - Pin 2) -> Pin 16 (TX)
+- 3v3 (VSYS - Pin 39) -> 3v3
+- GND (Pin 38) -> GND
+
+Raspberry Pi Zero 2 W -> Video Game Module
+- TX (GPIO 14 - Pin 8) -> Pin 14 (RX)
+- RX (GPIO 15 - Pin 10) -> Pin 13 (TX)
+- GND (Pin 6) -> Pin 11 (GND)
+- Do NOT connect 3v3 or 5v (power via USB cable instead)
