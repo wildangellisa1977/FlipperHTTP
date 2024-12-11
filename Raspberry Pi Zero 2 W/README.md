@@ -64,7 +64,7 @@ Before you begin, ensure you have the following:
 - **Check** the option **`Configure wireless LAN`**.
 - **Enter** your **WiFi SSID** and **Password**.
   
-  *_Important_: Configuring WiFi at this stage prevents future connectivity issues._
+  *Important: Configuring WiFi at this stage prevents future connectivity issues.*
 
 #### b. Enable SSH
 
@@ -102,7 +102,7 @@ SSH allows you to access your Raspberry Pi remotely from your computer's termina
 
 ### Step 2: Ping the Raspberry Pi
 
-1. Type the following command to check connectivity:
+1. Make sure your computer is connected to the same network that your Pi is on, then type the following command to check connectivity:
 
    ```bash
    ping pi@raspberrypi.local
