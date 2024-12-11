@@ -2,7 +2,7 @@
 // License: MIT
 // Author: JBlanked
 // File: flipper_http.c
-#include <flipper_http.h> // change this to where flipper_http.h is located
+#include <flipper_http/flipper_http.h> // change this to where flipper_http.h is located
 FlipperHTTP fhttp;
 char rx_line_buffer[RX_LINE_BUFFER_SIZE];
 uint8_t file_buffer[FILE_BUFFER_SIZE];
