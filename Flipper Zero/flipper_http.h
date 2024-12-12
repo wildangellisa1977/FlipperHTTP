@@ -85,13 +85,13 @@ typedef struct
     bool save_received_data;   // Flag to save the received data to a file
 
     bool just_started_bytes; // Indicates if bytes data reception has just started
+
+    char rx_line_buffer[RX_LINE_BUFFER_SIZE];
+    uint8_t file_buffer[FILE_BUFFER_SIZE];
+    size_t file_buffer_len;
 } FlipperHTTP;
 
 extern FlipperHTTP fhttp;
-// Global static array for the line buffer
-extern char rx_line_buffer[RX_LINE_BUFFER_SIZE];
-extern uint8_t file_buffer[FILE_BUFFER_SIZE];
-extern size_t file_buffer_len;
 
 // fhttp.last_response holds the last received data from the UART
 
@@ -382,5 +382,4 @@ void flipper_http_loading_task(bool (*http_request)(void),
                                uint32_t success_view_id,
                                uint32_t failure_view_id,
                                ViewDispatcher **view_dispatcher);
-
 #endif // FLIPPER_HTTP_H
