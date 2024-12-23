@@ -11,6 +11,7 @@ Check out this video tutorial showcasing the functionality of all seven applicat
 ## Apps That Utilize FlipperHTTP
 The following apps integrate FlipperHTTP to enhance their functionality:
 
+- **FlipWorld** - An open-world multiplayer game: [https://github.com/jblanked/FlipWorld](https://github.com/jblanked/FlipWorld)
 - **FlipStore** - A marketplace for downloading and managing apps and software on your Flipper Zero: [https://github.com/jblanked/FlipStore](https://github.com/jblanked/FlipStore)
 - **FlipSocial** - A social media platform for the Flipper Zero: [https://github.com/jblanked/FlipSocial](https://github.com/jblanked/FlipSocial)
 - **FlipLibrary** - A Flipper Zero app with a dictionary, random facts, and more: [https://github.com/jblanked/FlipLibrary](https://github.com/jblanked/FlipLibrary)
