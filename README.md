@@ -77,7 +77,7 @@ Raspberry Pi Pico W/Pico 2 W -> Video Game Module
 - GND (Pin 38) -> GND
 
 Raspberry Pi Zero 2 W -> Video Game Module
-- TX (GPIO 14 - Pin 8) -> Pin 14 (RX)
-- RX (GPIO 15 - Pin 10) -> Pin 13 (TX)
+- TX (GPIO 14 - Pin 8) -> Pin 17 (RX)
+- RX (GPIO 15 - Pin 10) -> Pin 16 (TX)
 - GND (Pin 6) -> Pin 11 (GND)
 - Do NOT connect 3v3 or 5v (power via USB cable instead)
