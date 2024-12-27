@@ -50,6 +50,12 @@ ESP32 -> Flipper
 - 3v3 -> Pin 9 (3v3)
 - GND -> Pin 11 (GND)
 
+ESP32-Cam -> Flipper
+- TX -> Pin 13 (TX)
+- RX -> Pin 14 (RX)
+- VCC -> Pin 9 (3v3)
+- GND (Do NOT use GND/R) -> Pin 11 (GND)
+
 Raspberry Pi Pico W/Pico 2 W -> Flipper
 - TX (GPIO 0 - Pin 1) -> Pin 14 (RX)
 - RX (GPIO 1 - Pin 2) -> Pin 13 (TX)
