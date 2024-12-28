@@ -45,14 +45,14 @@ The FlipperHTTP firmware supports eight boards. Instructions for each board can 
 
 ## Wiring
 ESP32 -> Flipper
-- TX -> Pin 13 (TX)
-- RX -> Pin 14 (RX)
+- TX -> Pin 14 (RX)
+- RX -> Pin 13 (TX)
 - 3v3 -> Pin 9 (3v3)
 - GND -> Pin 11 (GND)
 
 ESP32-Cam -> Flipper
-- TX -> Pin 13 (TX)
-- RX -> Pin 14 (RX)
+- TX -> Pin 14 (RX)
+- RX -> Pin 13 (TX)
 - VCC -> Pin 9 (3v3)
 - GND (Do NOT use GND/R) -> Pin 11 (GND)
 
