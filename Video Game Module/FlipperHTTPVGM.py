@@ -10,9 +10,10 @@ Change Log:
 """
 
 from machine import UART, Pin
+from ICM42688P import ICM42688P
 import ujson
 from time import sleep, ticks_ms
-import errno
+import time
 import gc
 
 
@@ -24,9 +25,13 @@ class FlipperHTTP:
         self.uart_esp32 = None
         self.led = Pin("LED", Pin.OUT)  # LED on the Pico 2W
         self.BAUD_RATE = 115200
+        self.sensor = None
 
     def setup(self) -> None:
         """Start UART and load the WiFi credentials"""
+        # Initialize the sensor
+        self.sensor = ICM42688P()
+        self.sensor.initialize()
         self.uart_flipper = UART(0, baudrate=self.BAUD_RATE, tx=Pin(0), rx=Pin(1))
         self.uart_esp32 = UART(1, baudrate=self.BAUD_RATE, tx=Pin(24), rx=Pin(21))
         self.uart_flipper.init()
@@ -98,3 +103,49 @@ class FlipperHTTP:
 
         # Timeout reached with no newline received
         return None
+
+    # the Flipper only sends data to the ESP32, so if data is received from the Flipper,
+    # it's meant for the ESP32. and if no data is received from the Flipper,
+    # then continuously send sensor data to the Flipper
+    def loop(self):
+        while True:
+            gc.collect()  # Run garbage collection to free up memory
+            try:
+                if self.uart_flipper.any() > 0:
+                    data = self.readLine(self.uart_flipper)
+
+                    self.ledStatus()
+
+                    if not data:  # Checks for None or empty string
+                        self.led.off()
+                        continue
+
+                    # data is more than likely valid, so send to ESP32
+                    self.println(self.uart_esp32, data)
+
+                    # Wait for response from ESP32
+                    response = self.readLine(self.uart_esp32)
+
+                    if not response:
+                        self.led.off()
+                        continue
+
+                    # Send response back to Flipper
+                    self.println(self.uart_flipper, response)
+
+                    self.led.off()
+                else:
+                    self.ledStatus()
+                    # send sensor data
+                    accel = self.sensor.read_accelerometer()
+                    gyro = self.sensor.read_gyroscope()
+                    temp = self.sensor.read_temperature()
+                    # format as json
+                    data = {"accel": accel, "gyro": gyro, "temp": temp}
+                    data = ujson.dumps(data)
+                    self.println(self.uart_flipper, data)
+                    self.led.off()
+            except Exception as e:
+                self.println(self.uart_flipper, f"[ERROR] {e}")
+                self.led.off()
+                continue
