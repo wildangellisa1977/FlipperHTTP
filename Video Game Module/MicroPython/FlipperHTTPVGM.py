@@ -138,7 +138,7 @@ class FlipperHTTP:
                         self.led.off()
                         continue
 
-                    # data is more than likely valid, so send to ESP32
+                    # data is more than likely valid, so send to Flipper
                     self.println(self.uart_flipper, data)
 
             except Exception as e:
