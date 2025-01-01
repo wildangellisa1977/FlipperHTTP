@@ -23,9 +23,10 @@ class FlipperHTTP:
         self.timeout = 2000  # milliseconds
         self.uart_flipper = None
         self.uart_esp32 = None
-        self.led = Pin("LED", Pin.OUT)  # LED on the Pico 2W
+        self.led = Pin("LED", Pin.OUT)  # LED on the Pico
         self.BAUD_RATE = 115200
         self.sensor = None
+        self.run_gyro = False
 
     def setup(self) -> None:
         """Start UART and load the WiFi credentials"""
@@ -134,7 +135,21 @@ class FlipperHTTP:
                     self.println(self.uart_flipper, response)
 
                     self.led.off()
-                else:
+
+                elif self.uart_esp32.any() > 0:
+                    data = self.readLine(self.uart_esp32)
+
+                    self.ledStatus()
+
+                    if not data:  # Checks for None or empty string
+                        self.led.off()
+                        continue
+
+                    # data is more than likely valid, so send to ESP32
+                    self.println(self.uart_flipper, data)
+
+                elif self.run_gyro:
+
                     self.ledStatus()
                     # send sensor data
                     accel = self.sensor.read_accelerometer()
@@ -145,6 +160,7 @@ class FlipperHTTP:
                     data = ujson.dumps(data)
                     self.println(self.uart_flipper, data)
                     self.led.off()
+                    sleep(0.5)
             except Exception as e:
                 self.println(self.uart_flipper, f"[ERROR] {e}")
                 self.led.off()
