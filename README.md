@@ -32,6 +32,7 @@ For common bugs and their solutions, see: [https://github.com/jblanked/FlipperHT
 The FlipperHTTP firmware supports eight boards. Instructions for each board can be found below:
 
 - **WiFi Developer Board:** [https://github.com/jblanked/FlipperHTTP/tree/main/WiFi%20Developer%20Board%20(ESP32S2)](https://github.com/jblanked/FlipperHTTP/tree/main/WiFi%20Developer%20Board%20(ESP32S2))
+- **Video Game Module:** [https://github.com/jblanked/FlipperHTTP/tree/main/Video%20Game%20Module](https://github.com/jblanked/FlipperHTTP/tree/main/Video%20Game%20Module)
 - **Raspberry Pi Pico W:** [https://github.com/jblanked/FlipperHTTP/tree/main/Raspberry%20Pi%20Pico%20W](https://github.com/jblanked/FlipperHTTP/tree/main/Raspberry%20Pi%20Pico%20W)
 - **Raspberry Pi Pico 2 W:** [https://github.com/jblanked/FlipperHTTP/tree/main/Raspberry%20Pi%20Pico%202%20W](https://github.com/jblanked/FlipperHTTP/tree/main/Raspberry%20Pi%20Pico%202%20W)
 - **Raspberry Pi Zero 2 W:** [https://github.com/jblanked/FlipperHTTP/tree/main/Raspberry%20Pi%20Zero%202%20W](https://github.com/jblanked/FlipperHTTP/tree/main/Raspberry%20Pi%20Zero%202%20W)
@@ -43,6 +44,12 @@ The FlipperHTTP firmware supports eight boards. Instructions for each board can 
 
 
 ## Wiring
+WiFi Developer Board -> Flipper
+- TX (Pin 14) -> Pin 14 (RX)
+- RX (Pin 13) -> Pin 13 (TX)
+- 3v3 (Pin 9) -> 3v3
+- GND (Pin 11) -> GND
+
 ESP32 -> Flipper
 - TX -> Pin 14 (RX)
 - RX -> Pin 13 (TX)
@@ -69,20 +76,26 @@ Raspberry Pi Zero 2 W -> Flipper
 - GND (Pin 6) -> Pin 11 (GND)
 - Do NOT connect 3v3 or 5v (power via USB cable instead)
 
+WiFi Developer Board -> Video Game Module
+- TX (Pin 14) -> Pin 21 (RX)
+- RX (Pin 13) -> Pin 24 (TX)
+- 3v3 (Pin 9) -> 3v3
+- GND (Pin 11) -> GND
+
 ESP32 -> Video Game Module
-- TX -> Pin 17 (RX)
-- RX -> Pin 16 (TX)
+- TX -> Pin 21 (RX)
+- RX -> Pin 24 (TX)
 - 3v3 -> 3v3
 - GND -> GND
 
 Raspberry Pi Pico W/Pico 2 W -> Video Game Module
-- TX (GPIO 0 - Pin 1) -> Pin 17 (RX)
-- RX (GPIO 1 - Pin 2) -> Pin 16 (TX)
+- TX (GPIO 0 - Pin 1) -> Pin 21 (RX)
+- RX (GPIO 1 - Pin 2) -> Pin 24 (TX)
 - 3v3 (VSYS - Pin 39) -> 3v3
 - GND (Pin 38) -> GND
 
 Raspberry Pi Zero 2 W -> Video Game Module
-- TX (GPIO 14 - Pin 8) -> Pin 17 (RX)
-- RX (GPIO 15 - Pin 10) -> Pin 16 (TX)
+- TX (GPIO 14 - Pin 8) -> Pin 21 (RX)
+- RX (GPIO 15 - Pin 10) -> Pin 24 (TX)
 - GND (Pin 6) -> Pin 11 (GND)
 - Do NOT connect 3v3 or 5v (power via USB cable instead)
