@@ -9,11 +9,11 @@ Updated: 2025-01-01
 #include "FlipperHTTPVGM.h"
 
 // Clear serial buffer to avoid any residual data
-void FlipperHTTP::clearSerialBuffer()
+void FlipperHTTP::clearSerialBuffer(SerialPIO *serial)
 {
-    while (this->SerialPico->available() > 0)
+    while (serial->available() > 0)
     {
-        this->SerialPico->read();
+        serial->read();
     }
 }
 
@@ -48,37 +48,26 @@ void FlipperHTTP::ledStatus()
 
 void FlipperHTTP::setup()
 {
-    this->SerialPico = new SerialPIO(0, 1);
-    this->SerialPico->begin(BAUD_RATE);
+    this->SerialFlipper = new SerialPIO(0, 1); // TX on GPIO0, RX on GPIO1
+    this->SerialESP32 = new SerialPIO(24, 21); // TX on GPIO24, RX on GPIO21
 
-    if (!LittleFS.begin())
-    {
-        if (LittleFS.format())
-        {
-            if (!LittleFS.begin())
-            {
-                this->SerialPico->println("Failed to re-mount LittleFS after formatting.");
-                rp2040.reboot();
-            }
-        }
-        else
-        {
-            this->SerialPico->println("File system formatting failed.");
-            rp2040.reboot();
-        }
-    }
+    this->SerialFlipper->begin(BAUD_RATE);
+    this->SerialESP32->begin(BAUD_RATE);
+
+    this->SerialFlipper->setTimeout(5000);
+    this->SerialESP32->setTimeout(5000);
+
     this->useLED = true;
     this->ledStart();
-    this->SerialPico->flush();
+    this->SerialFlipper->flush();
+    this->SerialESP32->flush();
 }
 
-String FlipperHTTP::readSerialLine()
+String FlipperHTTP::readSerialLine(SerialPIO *serial)
 {
-    String receivedData = "";
+    String receivedData = serial->readStringUntil('\n');
 
-    receivedData = this->SerialPico->readStringUntil('\n');
-
-    receivedData.trim(); // Remove any leading/trailing whitespace
+    receivedData.trim(); // Remove any leading/trailing whitespace and newline characters
 
     return receivedData;
 }
@@ -87,11 +76,34 @@ String FlipperHTTP::readSerialLine()
 void FlipperHTTP::loop()
 {
     // Check if there's incoming serial data
-    if (this->SerialPico->available() > 0)
+    if (this->SerialFlipper->available() > 0)
     {
-        // Read the incoming serial data until newline
-        String _data = this->readSerialLine();
-
         this->ledStatus();
+
+        // Read the incoming serial data until newline
+        String _data = this->readSerialLine(this->SerialFlipper);
+
+        // send to ESP32
+        this->SerialESP32->println(_data);
+
+        // Wait for response from ESP32
+        String _response = this->readSerialLine(this->SerialESP32);
+
+        // Send response back to Flipper
+        this->SerialFlipper->println(_response);
+
+        this->ledOff();
+    }
+    else if (this->SerialESP32->available() > 0)
+    {
+        this->ledStatus();
+
+        // Read the incoming serial data until newline
+        String _data = this->readSerialLine(this->SerialESP32);
+
+        // send to Flipper
+        this->SerialFlipper->println(_data);
+
+        this->ledOff();
     }
 }

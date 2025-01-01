@@ -11,11 +11,8 @@ Change Log:
 */
 #pragma once
 
-#include <HTTPClient.h>
-#include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
 #include <Arduino.h>
-#include <LittleFS.h> // replacement for SPIFFS
 
 // Define UART parameters
 #define BAUD_RATE 115200
@@ -31,16 +28,17 @@ public:
     {
     }
 
-    void clearSerialBuffer();
+    void clearSerialBuffer(SerialPIO *serial);
     void ledAction(int timeout = 250);             // Function to flash the LED
     void ledStart();                               // Display LED sequence when the Pico is first connected to the Flipper
     void ledStatus();                              // Starting LED (Green only)
     void ledOff() { digitalWrite(PICO_LED, OFF); } // Turn off LED
     void setup();                                  // Arduino setup function
-    String readSerialLine();                       // Read serial data until newline character
+    String readSerialLine(SerialPIO *serial);      // Read a line from the serial port
 
     void loop(); // Main loop for flipper-http-vgm.ino that handles all of the commands
 private:
-    SerialPIO *SerialPico; // Serial object for the Pico
-    bool useLED = true;    // Variable to control LED usage
+    SerialPIO *SerialESP32;   // Serial object for the ESP32
+    SerialPIO *SerialFlipper; // Serial object for the Flipper
+    bool useLED = true;       // Variable to control LED usage
 };
