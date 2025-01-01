@@ -3,17 +3,15 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over serial.
 Created: 2024-12-31
-Updated: 2024-12-31
+Updated: 2025-01-01
 
 Change Log:
 - 2024-12-31: Initial commit
+- 2025-01-01: Removed ICM42688P
 """
 
 from machine import UART, Pin
-from ICM42688P import ICM42688P
-import ujson
 from time import sleep, ticks_ms
-import time
 import gc
 
 
@@ -25,14 +23,9 @@ class FlipperHTTP:
         self.uart_esp32 = None
         self.led = Pin("LED", Pin.OUT)  # LED on the Pico
         self.BAUD_RATE = 115200
-        self.sensor = None
-        self.run_gyro = False
 
     def setup(self) -> None:
         """Start UART and load the WiFi credentials"""
-        # Initialize the sensor
-        self.sensor = ICM42688P()
-        self.sensor.initialize()
         self.uart_flipper = UART(0, baudrate=self.BAUD_RATE, tx=Pin(0), rx=Pin(1))
         self.uart_esp32 = UART(1, baudrate=self.BAUD_RATE, tx=Pin(24), rx=Pin(21))
         self.uart_flipper.init()
@@ -148,19 +141,6 @@ class FlipperHTTP:
                     # data is more than likely valid, so send to ESP32
                     self.println(self.uart_flipper, data)
 
-                elif self.run_gyro:
-
-                    self.ledStatus()
-                    # send sensor data
-                    accel = self.sensor.read_accelerometer()
-                    gyro = self.sensor.read_gyroscope()
-                    temp = self.sensor.read_temperature()
-                    # format as json
-                    data = {"accel": accel, "gyro": gyro, "temp": temp}
-                    data = ujson.dumps(data)
-                    self.println(self.uart_flipper, data)
-                    self.led.off()
-                    sleep(0.5)
             except Exception as e:
                 self.println(self.uart_flipper, f"[ERROR] {e}")
                 self.led.off()

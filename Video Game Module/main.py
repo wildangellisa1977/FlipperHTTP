@@ -4,7 +4,7 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over serial.
 Created: 2024-12-31
-Updated: 2024-12-31
+Updated: 2025-01-01
 """
 
 from FlipperHTTPVGM import FlipperHTTP, Pin
