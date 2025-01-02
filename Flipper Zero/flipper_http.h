@@ -146,7 +146,7 @@ void _flipper_http_rx_callback(
  * @param      context   The context to pass to the callback.
  * @note       The received data will be handled asynchronously via the callback.
  */
-bool flipper_http_init(FlipperHTTP_Callback callback, void *context);
+bool flipper_http_init();
 
 // Deinitialize UART
 /**
