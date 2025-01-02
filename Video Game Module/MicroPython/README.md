@@ -18,3 +18,5 @@
     - Repeat the steps above for the `main.py`, saving it to the Video Game Module with the name `main.py`.
 
 You're all set! When you reboot your Video Game Module, it will run the FlipperHTTP Flash. 
+
+For wiring information, click [here](https://github.com/jblanked/FlipperHTTP?tab=readme-ov-file#wiring).

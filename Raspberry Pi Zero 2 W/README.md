@@ -311,3 +311,6 @@ python main.py
 
 - **Broken Dependencies**: Run `sudo apt-get install -f` to fix.
 - **Permission Denied**: Use `sudo` where necessary.
+
+
+For wiring information, click [here](https://github.com/jblanked/FlipperHTTP?tab=readme-ov-file#wiring).

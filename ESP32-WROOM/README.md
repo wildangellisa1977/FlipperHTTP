@@ -20,3 +20,5 @@
 17. Lastly, on the ESP32-WROOM, press the RESET button once.
 
 You are all set. Here's a video tutorial: https://www.youtube.com/watch?v=AZfbrLKJMpM
+
+For wiring information, click [here](https://github.com/jblanked/FlipperHTTP?tab=readme-ov-file#wiring).
