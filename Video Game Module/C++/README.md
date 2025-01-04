@@ -8,13 +8,13 @@ There are two installation methods. Choose whichever is the most convenient for 
 3. Disconnect your Video Game Module from your Flipper and connect your Flipper to your computer.
 4. Open qFlipper.
 5. Click on the `File manager`.
-6. Navigate to `SD Card/apps_data/flipper_http/`. If the folder doesn’t exist, create it yourself. Inside that folder, create a folder called `VGM`.
+6. Navigate to `SD Card/apps_data/vgm/`. If the folder doesn’t exist, create it yourself. Inside that folder, create a folder called `FlipperHTTP`.
 7. Drag the `flipper_http_vgm_c++.uf2` file you downloaded earlier into the directory.
 8. Disconnect your Flipper from your computer, then turn off your Flipper.
 9. Connect your Video Game Module to the Flipper, then turn on your Flipper.
 10. Open the Video Game Module Tool app on your Flipper. It should be located in the `Apps->GPIO` folder from the main menu.
 11. In the Video Game Module Tool app, select `Install Firmware from File`, then `apps_data`.
-12. Scroll down and click on the `flipper_http` folder, then `VGM`, and then `flipper_http_vgm_c++.uf2`.
+12. Scroll down and click on the `vgm` folder, then `FlipperHTTP`, and then `flipper_http_vgm_c++.uf2`.
 13. The app will begin flashing the firmware to your Video Game Module. Wait until the process is complete.
 
 ### Method 2
