@@ -6,6 +6,8 @@ Star the repository and [follow me](https://www.github.com/jblanked) to stay upd
 
 Check out this video tutorial showcasing the functionality of all seven applications: https://www.youtube.com/watch?v=xR1ZbpOVTwE
 
+Special thank you to Talking Sasquatch for his support: https://www.youtube.com/watch?v=jYZkdz664Tg
+
 
 ## Apps That Utilize FlipperHTTP
 The following apps integrate FlipperHTTP to enhance their functionality:
@@ -19,7 +21,7 @@ The following apps integrate FlipperHTTP to enhance their functionality:
 - **FlipTrader** - Uses WiFi to fetch stock and currency pair prices on your Flipper Zero: [https://github.com/jblanked/FlipTrader](https://github.com/jblanked/FlipTrader)
 - **FlipWiFi** - A FlipperHTTP companion app for scanning and saving WiFi networks on your Flipper Zero: [https://github.com/jblanked/FlipWiFi](https://github.com/jblanked/FlipWiFi)
 
-All seven applications are available for download at the following link: https://www.flipsocial.net/download/ (or by clicking on the repository link above).
+All eight applications are available for download at the following link: https://www.flipsocial.net/download/ (or by clicking on the repository link above).
 
 ## Usage
 FlipperHTTP can be utilized by developers in Flipper Zero apps and scripts written in C, JavaScript, and MicroPython. For details, visit: [https://github.com/jblanked/FlipperHTTP/tree/main/Flipper%20Zero](https://github.com/jblanked/FlipperHTTP/tree/main/Flipper%20Zero)
