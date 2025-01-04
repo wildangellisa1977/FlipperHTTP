@@ -7,4 +7,4 @@
 
 For wiring information, click [here](https://github.com/jblanked/FlipperHTTP?tab=readme-ov-file#wiring).
 
-Note: It's best to use the MicroPython method currently, as there's a bug in the C++ version. This will be solved soon and all contributions are welcome.
+Note: It's best to use the MicroPython file currently, as there's a bug in the C++ version. This will be solved soon and all contributions are welcome.
