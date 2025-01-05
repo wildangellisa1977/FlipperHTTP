@@ -78,6 +78,9 @@ Raspberry Pi Zero 2 W -> Flipper
 - GND (Pin 6) -> Pin 11 (GND)
 - Do NOT connect 3v3 or 5v (power via USB cable instead)
 
+## Video Game Module Wiring
+How to make a custom attachment for the VGM: https://www.youtube.com/watch?v=iNwOJzZCplc
+
 WiFi Developer Board -> Video Game Module
 - TX (Pin 14) -> Pin 21 (RX)
 - RX (Pin 13) -> Pin 24 (TX)
