@@ -1,13 +1,25 @@
-## ESP32-C6 Installation (Windows Only)
+## ESP32-C6 Installation
+1. Install the ESP Flasher app on your Flipper Zero from the Apps catalog: https://lab.flipper.net/apps/esp_flasher
+2. Download the `flipper_http_bootloader_esp32_c6.bin`, `flipper_http_firmware_a_esp32_c6.bin`, and `flipper_http_partitions_esp32_c6.bin` files.
+3. Disconnect your ESP32-C6 and connect your Flipper Zero to your computer.
+4. Open up qFlipper.
+5. Click on the `File manager`.
+6. Navigate to `SD Card/apps_data/esp_flasher/`. If the folder doesn’t exist, create it yourself or run the ESP Flasher app once.
+7. Drag all three bin files you downloaded earlier into the directory.
+8. Disconnect your Flipper from your computer then turn off your Flipper.
+9. Connect your ESP32-C6 into the Flipper then turn on your Flipper.
+10. Open the ESP Flasher app on your Flipper, it should be located in the `Apps->GPIO` folder from the main menu. 
+11. In the ESP Flasher app, select the following options:
+    - `Reset Board`: wait a few seconds, then go back.
+    - `Enter Bootloader`: wait until the 'waiting for download' message appears, then go back.
+    - `Flash ESP`: if you do not see this option at the top of the main menu, then click `Manual Flash`.
+12. Click on `Select if using S3`.
+13. Click on `Bootloader (0x0)` and select the `flipper_http_bootloader_esp32_c6.bin` that you downloaded earlier.
+14. Click on `Part Table (0x8000)` and select the `flipper_http_partitions_esp32_c6.bin` that you downloaded earlier.
+15. Click on `FirmwareA (0x10000)` and select the `flipper_http_firmware_a_esp32_c6.bin` that you downloaded earlier.
+16. Click on `FLASH - fast (S3)` to flash the firmware to your ESP32-C6. Wait until the process is complete. If successful, the LED of the ESP32-C6 will flash GREEN three times.
+17. Lastly, on the ESP32-C6, press the RESET button once. Alternatively, you can disconnect and reconnect the board.
 
-1. Download the `flipper_http_bootloader_esp32_c6.bin`, `flipper_http_firmware_a_esp32_c6.bin`, and `flipper_http_partitions_esp32_c6.bin` files.
-2. Install the Flash Download Tool by Espressif: [Flash Download Tool Documentation](https://docs.espressif.com/projects/esp-test-tools/en/latest/esp32/production_stage/tools/flash_download_tool.html).
-3. Follow the user interface instructions to download the ESP32-C6 Manager: [User Interface Instructions](https://docs.espressif.com/projects/esp-test-tools/en/latest/esp32/production_stage/tools/flash_download_tool.html#user-interface).
-4. Click on `...` in the first row and select the `flipper_http_bootloader_esp32_c6.bin` file you downloaded earlier. Then set the `@` address to `0x0`.
-5. Click on `...` and select the `flipper_http_partitions_esp32_c6.bin` file you downloaded earlier. Then set the `@` address to `0x8000`.
-6. Click on `...` and select the `flipper_http_firmware_a_esp32_c6.bin` file you downloaded earlier. Then set the `@` address to `0x10000`.
-7. Change the `SPI Speed` to `80 MHz`, `SPI Mode` to `DIO`, and `BAUD` to `115200`. Then click `Start` and wait for the process to complete.
-
-For more details, see [this issue](https://github.com/jblanked/FlipperHTTP/issues/3#issuecomment-2574077289).
+You are all set. Here's a video tutorial: https://www.youtube.com/watch?v=AZfbrLKJMpM
 
 For wiring information, click [here](https://github.com/jblanked/FlipperHTTP?tab=readme-ov-file#wiring).
