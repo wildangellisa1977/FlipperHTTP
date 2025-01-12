@@ -4,7 +4,7 @@ Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over serial.
 Board Manager: ESP32S2 Dev Module
 Created: 2024-09-30
-Updated: 2024-12-02
+Updated: 2025-01-12
 
 Change Log:
 - 2024-09-30: Initial commit
@@ -20,13 +20,15 @@ Change Log:
 - 2024-10-26: Updated the saveWifiSettings and loadWifiSettings methods to save and load a list of wifi networks, and added [WIFI/LIST] command
 - 2024-11-09: Added SSL certificate from https://letsencrypt.org/certificates/
 - 2024-12-02: Restructured the code
+- 2025-01-12:
+    - Added uploadBytes method
+    - Added timeout to stream requests
+    - Added NTP time sync
 */
 
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
-#include "SPIFFS.h"
-#include <ArduinoJson.h>
 #include <Arduino.h>
 
 #define B_PIN 4 // Blue
@@ -68,6 +70,7 @@ public:
     void setup();                                                                                                              // Arduino setup function
     String readSerialLine();                                                                                                   // Read serial data until newline character
     bool readSerialSettings(String receivedData, bool connectAfterSave);                                                       // Read the serial data and save the settings
+    bool uploadBytes(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize);        // Upload bytes to server
 
     void loop(); // Main loop for flipper-http.ino that handles all of the commands
 private:

@@ -4,10 +4,12 @@ Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over serial.
 Board Manager: ESP32S2 Dev Module
 Created: 2024-09-30
-Updated: 2024-12-02
+Updated: 2025-01-12
 */
 
 #include <FlipperHTTP.h>
+#include "SPIFFS.h"
+#include <ArduinoJson.h>
 
 // Clear serial buffer to avoid any residual data
 void FlipperHTTP::clearSerialBuffer()
@@ -42,6 +44,7 @@ bool FlipperHTTP::connectToWifi()
     if (this->isConnectedToWifi())
     {
         Serial.println("[SUCCESS] Successfully connected to Wifi.");
+        configTime(0, 0, "pool.ntp.org"); // get UTC time via NTP
         return true;
     }
     else
@@ -86,12 +89,12 @@ String FlipperHTTP::delete_request(String url, String payload)
                     {
                         response = http.getString();
                         http.end();
-                        this->client.setCACert(this->root_ca); // reset to secure
+                        this->client.setCACert(this->root_ca);
                         return response;
                     }
                     else
                     {
-                        this->client.setCACert(this->root_ca); // reset to secure
+                        this->client.setCACert(this->root_ca);
                         Serial.println("[ERROR] DELETE Request Failed");
                     }
                 }
@@ -157,12 +160,12 @@ String FlipperHTTP::delete_request(String url, String payload, const char *heade
                     {
                         response = http.getString();
                         http.end();
-                        this->client.setCACert(this->root_ca); // reset to secure
+                        this->client.setCACert(this->root_ca);
                         return response;
                     }
                     else
                     {
-                        this->client.setCACert(this->root_ca); // reset to secure
+                        this->client.setCACert(this->root_ca);
                         Serial.println("[ERROR] DELETE Request Failed");
                     }
                 }
@@ -216,12 +219,12 @@ String FlipperHTTP::get(String url)
                     {
                         payload = http.getString();
                         http.end();
-                        this->client.setCACert(this->root_ca); // reset to secure
+                        this->client.setCACert(this->root_ca);
                         return payload;
                     }
                     else
                     {
-                        this->client.setCACert(this->root_ca); // reset to secure
+                        this->client.setCACert(this->root_ca);
                         Serial.println("[ERROR] GET Request Failed");
                     }
                 }
@@ -287,12 +290,12 @@ String FlipperHTTP::get(String url, const char *headerKeys[], const char *header
                     {
                         payload = http.getString();
                         http.end();
-                        this->client.setCACert(this->root_ca); // reset to secure
+                        this->client.setCACert(this->root_ca);
                         return payload;
                     }
                     else
                     {
-                        this->client.setCACert(this->root_ca); // reset to secure
+                        this->client.setCACert(this->root_ca);
                         Serial.println("[ERROR] GET Request Failed");
                     }
                 }
@@ -313,7 +316,6 @@ String FlipperHTTP::get(String url, const char *headerKeys[], const char *header
 
 bool FlipperHTTP::get_bytes_to_file(String url, const char *headerKeys[], const char *headerValues[], int headerSize)
 {
-
     HTTPClient http;
 
     http.collectHeaders(headerKeys, headerSize);
@@ -345,17 +347,32 @@ bool FlipperHTTP::get_bytes_to_file(String url, const char *headerKeys[], const 
                 return false;
             }
 
+            // Start timeout timer
+            unsigned long timeoutStart = millis();
+            const unsigned long timeoutInterval = 2000; // 2 seconds timeout
+
             // Stream data while connected and available
             while (http.connected() && (len > 0 || len == -1))
             {
                 size_t size = stream->available();
                 if (size)
                 {
+                    // Reset the timeout when data is received
+                    timeoutStart = millis();
+
                     int c = stream->readBytes(buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
                     Serial.write(buff, c); // Write data to serial
                     if (len > 0)
                     {
                         len -= c;
+                    }
+                }
+                else
+                {
+                    // Check if timeout elapsed
+                    if (millis() - timeoutStart > timeoutInterval)
+                    {
+                        break;
                     }
                 }
                 delay(1); // Yield control to the system
@@ -384,7 +401,7 @@ bool FlipperHTTP::get_bytes_to_file(String url, const char *headerKeys[], const 
                 Serial.print("[ERROR] GET Request Failed, error: ");
                 Serial.println(http.errorToString(httpCode).c_str());
             }
-            else // certification failed?
+            else // Possibly certificate failed
             {
                 // send request without SSL
                 http.end();
@@ -411,8 +428,13 @@ bool FlipperHTTP::get_bytes_to_file(String url, const char *headerKeys[], const 
                         {
                             Serial.println("[ERROR] Not enough memory to start processing the response.");
                             http.end();
+                            this->client.setCACert(this->root_ca);
                             return false;
                         }
+
+                        // Start timeout timer
+                        unsigned long timeoutStart = millis();
+                        const unsigned long timeoutInterval = 2000; // 2 seconds timeout
 
                         // Stream data while connected and available
                         while (http.connected() && (len > 0 || len == -1))
@@ -420,11 +442,22 @@ bool FlipperHTTP::get_bytes_to_file(String url, const char *headerKeys[], const 
                             size_t size = stream->available();
                             if (size)
                             {
+                                // Reset the timeout when new data comes in
+                                timeoutStart = millis();
+
                                 int c = stream->readBytes(buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
                                 Serial.write(buff, c); // Write data to serial
                                 if (len > 0)
                                 {
                                     len -= c;
+                                }
+                            }
+                            else
+                            {
+                                // Check if timeout has been reached
+                                if (millis() - timeoutStart > timeoutInterval)
+                                {
+                                    break;
                                 }
                             }
                             delay(1); // Yield control to the system
@@ -435,6 +468,7 @@ bool FlipperHTTP::get_bytes_to_file(String url, const char *headerKeys[], const 
                         {
                             Serial.println("[ERROR] Not enough memory to continue processing the response.");
                             http.end();
+                            this->client.setCACert(this->root_ca);
                             return false;
                         }
 
@@ -443,15 +477,16 @@ bool FlipperHTTP::get_bytes_to_file(String url, const char *headerKeys[], const 
                         Serial.flush();
                         Serial.println();
                         Serial.println("[GET/END]");
-                        this->client.setCACert(this->root_ca); // reset to secure
+                        this->client.setCACert(this->root_ca);
                         return true;
                     }
                     else
                     {
-                        this->client.setCACert(this->root_ca); // reset to secure
+                        this->client.setCACert(this->root_ca);
                         Serial.printf("[ERROR] GET request failed with error: %s\n", http.errorToString(httpCode).c_str());
                     }
                 }
+                this->client.setCACert(this->root_ca);
             }
         }
         http.end();
@@ -547,6 +582,7 @@ bool FlipperHTTP::loadWifiSettings()
 
         if (this->isConnectedToWifi())
         {
+            configTime(0, 0, "pool.ntp.org"); // get UTC time via NTP
             return true;
         }
     }
@@ -601,12 +637,12 @@ String FlipperHTTP::post(String url, String payload, const char *headerKeys[], c
                     {
                         response = http.getString();
                         http.end();
-                        this->client.setCACert(this->root_ca); // reset to secure
+                        this->client.setCACert(this->root_ca);
                         return response;
                     }
                     else
                     {
-                        this->client.setCACert(this->root_ca); // reset to secure
+                        this->client.setCACert(this->root_ca);
                         Serial.println("[ERROR] POST Request Failed");
                     }
                 }
@@ -661,12 +697,12 @@ String FlipperHTTP::post(String url, String payload)
                     {
                         response = http.getString();
                         http.end();
-                        this->client.setCACert(this->root_ca); // reset to secure
+                        this->client.setCACert(this->root_ca);
                         return response;
                     }
                     else
                     {
-                        this->client.setCACert(this->root_ca); // reset to secure
+                        this->client.setCACert(this->root_ca);
                         Serial.println("[ERROR] POST Request Failed");
                     }
                 }
@@ -733,12 +769,12 @@ String FlipperHTTP::put(String url, String payload, const char *headerKeys[], co
                     {
                         response = http.getString();
                         http.end();
-                        this->client.setCACert(this->root_ca); // reset to secure
+                        this->client.setCACert(this->root_ca);
                         return response;
                     }
                     else
                     {
-                        this->client.setCACert(this->root_ca); // reset to secure
+                        this->client.setCACert(this->root_ca);
                         Serial.println("[ERROR] PUT Request Failed");
                     }
                 }
@@ -792,12 +828,12 @@ String FlipperHTTP::put(String url, String payload)
                     {
                         response = http.getString();
                         http.end();
-                        this->client.setCACert(this->root_ca); // reset to secure
+                        this->client.setCACert(this->root_ca);
                         return response;
                     }
                     else
                     {
-                        this->client.setCACert(this->root_ca); // reset to secure
+                        this->client.setCACert(this->root_ca);
                         Serial.println("[ERROR] PUT Request Failed");
                     }
                 }
@@ -818,7 +854,6 @@ String FlipperHTTP::put(String url, String payload)
 
 bool FlipperHTTP::post_bytes_to_file(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize)
 {
-
     HTTPClient http;
 
     http.collectHeaders(headerKeys, headerSize);
@@ -850,17 +885,32 @@ bool FlipperHTTP::post_bytes_to_file(String url, String payload, const char *hea
                 return false;
             }
 
+            // Start timeout timer
+            unsigned long timeoutStart = millis();
+            const unsigned long timeoutInterval = 2000; // 2 seconds
+
             // Stream data while connected and available
             while (http.connected() && (len > 0 || len == -1))
             {
                 size_t size = stream->available();
                 if (size)
                 {
+                    // Reset the timeout when new data comes in
+                    timeoutStart = millis();
+
                     int c = stream->readBytes(buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
                     Serial.write(buff, c); // Write data to serial
                     if (len > 0)
                     {
                         len -= c;
+                    }
+                }
+                else
+                {
+                    // Check if timeout has been reached
+                    if (millis() - timeoutStart > timeoutInterval)
+                    {
+                        break;
                     }
                 }
                 delay(1); // Yield control to the system
@@ -891,7 +941,7 @@ bool FlipperHTTP::post_bytes_to_file(String url, String payload, const char *hea
             }
             else // certification failed?
             {
-                // send request without SSL
+                // Send request without SSL
                 http.end();
                 this->client.setInsecure();
                 if (http.begin(this->client, url))
@@ -916,8 +966,13 @@ bool FlipperHTTP::post_bytes_to_file(String url, String payload, const char *hea
                         {
                             Serial.println("[ERROR] Not enough memory to start processing the response.");
                             http.end();
+                            this->client.setCACert(this->root_ca);
                             return false;
                         }
+
+                        // Start timeout timer
+                        unsigned long timeoutStart = millis();
+                        const unsigned long timeoutInterval = 2000; // 2 seconds
 
                         // Stream data while connected and available
                         while (http.connected() && (len > 0 || len == -1))
@@ -925,11 +980,22 @@ bool FlipperHTTP::post_bytes_to_file(String url, String payload, const char *hea
                             size_t size = stream->available();
                             if (size)
                             {
+                                // Reset the timeout when new data arrives
+                                timeoutStart = millis();
+
                                 int c = stream->readBytes(buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
                                 Serial.write(buff, c); // Write data to serial
                                 if (len > 0)
                                 {
                                     len -= c;
+                                }
+                            }
+                            else
+                            {
+                                // Check if timeout has been reached
+                                if (millis() - timeoutStart > timeoutInterval)
+                                {
+                                    break;
                                 }
                             }
                             delay(1); // Yield control to the system
@@ -940,6 +1006,7 @@ bool FlipperHTTP::post_bytes_to_file(String url, String payload, const char *hea
                         {
                             Serial.println("[ERROR] Not enough memory to continue processing the response.");
                             http.end();
+                            this->client.setCACert(this->root_ca);
                             return false;
                         }
 
@@ -948,15 +1015,16 @@ bool FlipperHTTP::post_bytes_to_file(String url, String payload, const char *hea
                         Serial.flush();
                         Serial.println();
                         Serial.println("[POST/END]");
-                        this->client.setCACert(this->root_ca); // reset to secure
+                        this->client.setCACert(this->root_ca);
                         return true;
                     }
                     else
                     {
-                        this->client.setCACert(this->root_ca); // reset to secure
+                        this->client.setCACert(this->root_ca);
                         Serial.printf("[ERROR] POST request failed with error: %s\n", http.errorToString(httpCode).c_str());
                     }
                 }
+                this->client.setCACert(this->root_ca);
             }
         }
         http.end();
@@ -1120,6 +1188,107 @@ bool FlipperHTTP::readSerialSettings(String receivedData, bool connectAfterSave)
     return true;
 }
 
+// Upload bytes to server
+bool FlipperHTTP::uploadBytes(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize)
+{
+    HTTPClient http;
+
+    // set headers
+    http.collectHeaders(headerKeys, headerSize);
+
+    // begin connection
+    if (http.begin(this->client, url))
+    {
+        // add headers
+        for (int i = 0; i < headerSize; i++)
+        {
+            http.addHeader(headerKeys[i], headerValues[i]);
+        }
+
+        // send the request
+        int httpCode = http.POST(payload);
+        if (httpCode > 0)
+        {
+            Serial.println("[POST/SUCCESS]");
+
+            WiFiClient *stream = http.getStreamPtr();
+
+            // send incoming serial data to the server
+            if (Serial.available() > 0)
+            {
+                uint8_t buffer[128];
+                size_t len;
+                while ((len = Serial.readBytes(buffer, sizeof(buffer))) > 0)
+                {
+                    stream->write(buffer, len);
+                }
+                Serial.flush();
+            }
+
+            // end the request
+            http.end();
+            // Flush the serial buffer to ensure all data is sent
+            Serial.flush();
+            Serial.println();
+            Serial.println("[POST/END]");
+            return true;
+        }
+        else
+        {
+            if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
+            {
+                Serial.print("[ERROR] POST Request Failed, error: ");
+                Serial.println(http.errorToString(httpCode).c_str());
+            }
+            else // certification failed?
+            {
+                // send request without SSL
+                http.end();
+                this->client.setInsecure();
+                if (http.begin(this->client, url))
+                {
+                    for (int i = 0; i < headerSize; i++)
+                    {
+                        http.addHeader(headerKeys[i], headerValues[i]);
+                    }
+                    int newCode = http.POST(payload);
+                    if (newCode > 0)
+                    {
+                        Serial.println("[POST/SUCCESS]");
+
+                        WiFiClient *stream = http.getStreamPtr();
+
+                        // send incoming serial data to the server
+                        while (Serial.available() > 0)
+                        {
+                            stream->write(Serial.read());
+                        }
+
+                        // end the request
+                        http.end();
+                        // Flush the serial buffer to ensure all data is sent
+                        Serial.flush();
+                        Serial.println();
+                        Serial.println("[POST/END]");
+                        this->client.setCACert(this->root_ca);
+                        return true;
+                    }
+                    else
+                    {
+                        this->client.setCACert(this->root_ca);
+                        Serial.println("[ERROR] POST Request Failed");
+                    }
+                }
+            }
+        }
+        http.end();
+    }
+    else
+    {
+        Serial.println("[ERROR] Unable to connect to the server.");
+    }
+    return false;
+}
 // Main loop for flipper-http.ino that handles all of the commands
 void FlipperHTTP::loop()
 {
