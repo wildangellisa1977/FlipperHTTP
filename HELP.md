@@ -37,3 +37,8 @@ If you encounter any problems flashing your board with the FlipperHTTP firmware 
 ### Issue: "Failed to scan..."" in the FlipWiFi app
 **Solution:**
 1. Use FlipWiFi version 1.2.1 or higher. In the latest versions, if there aren't any 2.4 GHz networks around you, it will return an empty list instead.
+   
+### Issue: "Failed to load received data from file"" in the FlipWiFi app
+**Solution:**
+1. Delete FlipWiFi from your Flipper and install FlipWiFi version 1.3.1 or higher. 
+
