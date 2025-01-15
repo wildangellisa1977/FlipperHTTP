@@ -37,11 +37,13 @@ If you encounter any problems flashing your board with the FlipperHTTP firmware 
 ### Issue: "Failed to scan..."" in the FlipWiFi app
 **Solution:**
 1. Delete FlipWiFi from your Flipper Zero and install FlipWiFi version 1.2.1 or higher. In the latest versions, if there aren't any 2.4 GHz networks around you, it will return an empty list instead.
+2. Save your WiFi manually in the `Saved APs` option.
    
 ### Issue: "Failed to load received data from file" in the FlipWiFi app
 **Solution:**
 1. Delete FlipWiFi from your Flipper Zero and install FlipWiFi version 1.3.1 or higher.
+2. Save your WiFi manually in the `Saved APs` option.
 
 ### Issue: My Flipper Zero freezes after opening the FlipWorld app
 **Solution:**
-1. Delete FlipWorld from your Flipper Zero and install FlipWorld version 0.3 or higher. 
+1. Delete FlipWorld from your Flipper Zero and install FlipWorld version 0.3 or higher.
