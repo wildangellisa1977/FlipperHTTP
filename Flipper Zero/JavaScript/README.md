@@ -1,0 +1,25 @@
+## Usage in `JavaScript` (flipper_http.js)
+
+| **Function Name**                      | **Return Value** | **Parameters**                                       | **Description**                                                                                      |
+|----------------------------------------|------------------|-----------------------------------------------------|------------------------------------------------------------------------------------------------------|
+| `fhttp.init`                           | `void`           | None                                                | Initializes the serial connection with the correct settings.                                         |
+| `fhttp.deinit`                         | `void`           | None                                                | Deinitializes and ends the serial connection.                                                        |
+| `fhttp.connect_wifi`                   | `bool`           | None                                                | Sends a command to connect to WiFi and returns whether the connection was successful.                |
+| `fhttp.disconnect_wifi`                | `bool`           | None                                                | Sends a command to disconnect from WiFi and returns whether the disconnection was successful.         |
+| `fhttp.ping`                           | `bool`           | None                                                | Sends a ping request to test connectivity and returns whether a response was received.               |
+| `fhttp.scan_wifi`                      | `string`         | None                                                | Scans for nearby WiFi access points and returns a string with each access point separated by a comma. |
+| `fhttp.save_wifi`                      | `bool`           | `ssid: string`, `password: string`                  | Saves WiFi credentials and returns whether the save operation was successful.                        |
+| `fhttp.ip_wifi`                        | `string`         | None                                                | Gets the IP address of the connected WiFi network and returns it as a string.                        |
+| `fhttp.ip_address`                     | `string`         | None                                                | Gets the IP address of the WiFi Devboard and returns it as a string.                                 |
+| `fhttp.list_commands`                  | `string`         | None                                                | Lists all available commands and returns them as a string.                                           |
+| `fhttp.led_on`                         | `void`           | None                                                | Sends a command to allow the LED to display while processing.                                        |
+| `fhttp.led_off`                        | `void`           | None                                                | Sends a command to disable the LED from displaying while processing.                                 |
+| `fhttp.parse_json`                     | `string`         | `key: string`, `data: string`                       | Parses JSON data for a specified key and returns the corresponding value as a string.                |
+| `fhttp.parse_json_array`               | `string`         | `key: string`, `index: number`, `data: string`      | Parses an array within JSON data for a specified key and index, returning the corresponding value.   |
+| `fhttp.send_data`                      | `void`           | `data: string`                                      | Sends the specified data to the serial port.                                                         |
+| `fhttp.read_data`                      | `string`         | `delay_ms: number`                                  | Reads data from the serial port with a specified delay and returns the response received.            |
+| `fhttp.get_request`                    | `string`         | `url: string`                                       | Sends a GET request to the specified URL and returns the response.                                   |
+| `fhttp.get_request_with_headers`       | `string`         | `url: string`, `headers: string`                    | Sends a GET request with specified headers and returns the response.                                 |
+| `fhttp.post_request_with_headers`      | `string`         | `url: string`, `headers: string`, `payload: string` | Sends a POST request with specified headers and payload, returning the response.                     |
+| `fhttp.put_request_with_headers`       | `string`         | `url: string`, `headers: string`, `payload: string` | Sends a PUT request with specified headers and payload, returning the response.                      |
+| `fhttp.delete_request_with_headers`    | `string`         | `url: string`, `headers: string`, `payload: string` | Sends a DELETE request with specified headers and payload, returning the response.                   |
