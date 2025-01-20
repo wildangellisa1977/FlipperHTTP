@@ -2,9 +2,8 @@
 Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over serial.
-Board Manager: ESP32 Wrover Module
 Created: 2024-09-30
-Updated: 2024-12-03
+Updated: 2025-01-19
 
 Change Log:
 - 2024-09-30: Initial commit
@@ -19,22 +18,25 @@ Change Log:
 - 2024-10-25: Updated to automatically connect to WiFi on boot if settings are saved
 - 2024-10-26: Updated the saveWifiSettings and loadWifiSettings methods to save and load a list of wifi networks, and added [WIFI/LIST] command
 - 2024-11-09: Added SSL certificate from https://letsencrypt.org/certificates/
-- 2024-12-03: Restructured the code
+- 2024-12-02: Restructured the code
+- 2025-01-12:
+    - Added uploadBytes method
+    - Added timeout to stream requests
+    - Added NTP time sync
+- 2025-01-19:
+    - Created a LED class to handle LED actions for all supported boards
+    - Combined source files from all supported boards into one file
 */
-
+#pragma once
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
-#include "SPIFFS.h"
 #include <ArduinoJson.h>
 #include <Arduino.h>
+#include "led.h"
+#include "uart.h"
 
-#define B_PIN 4 // Blue
-#define G_PIN 5 // Green
-#define R_PIN 6 // Red
-
-#define ON LOW
-#define OFF HIGH
+#define BAUD_RATE 115200
 
 class FlipperHTTP
 {
@@ -44,30 +46,27 @@ public:
     {
     }
 
-    void clearSerialBuffer();                                                                                                  // Clear serial buffer to avoid any residual data
-    bool connectToWifi();                                                                                                      // Connect to Wifi using the loaded SSID and Password
-    String delete_request(String url, String payload);                                                                         // Delete request
-    String delete_request(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize);   // Delete request with headers
-    String get(String url);                                                                                                    // Get request
-    String get(String url, const char *headerKeys[], const char *headerValues[], int headerSize);                              // Get request with headers
-    bool get_bytes_to_file(String url, const char *headerKeys[], const char *headerValues[], int headerSize);                  // Get request to process bytes
-    String getIPAddress() { return WiFi.localIP().toString(); }                                                                // get IP addresss
-    bool isConnectedToWifi() { return WiFi.status() == WL_CONNECTED; }                                                         // Check if the Dev Board is connected to Wifi
-    void ledAction(int pin = G_PIN, int timeout = 250);                                                                        // Turn on and off the LED
-    void ledStart();                                                                                                           // Display LED sequence when Wifi Board is first connected to the Flipper
-    void ledStatus();                                                                                                          // Starting LED (Green only)
-    void ledOff();                                                                                                             // Turn off all LEDs
-    bool loadWifiSettings();                                                                                                   // Load Wifi settings from SPIFFS
-    String post(String url, String payload);                                                                                   // Post request
-    String post(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize);             // Post request with headers
-    bool post_bytes_to_file(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize); // Post request to process bytes
-    String put(String url, String payload);                                                                                    // Put request
-    String put(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize);              // Put request with headers
-    bool saveWifiSettings(String data);                                                                                        // Save and Load settings to and from SPIFFS
-    String scanWifiNetworks();                                                                                                 // returns a string of all wifi networks
-    void setup();                                                                                                              // Arduino setup function
-    String readSerialLine();                                                                                                   // Read serial data until newline character
-    bool readSerialSettings(String receivedData, bool connectAfterSave);                                                       // Read the serial data and save the settings
+    void clearSerialBuffer();                                                                                                 // Clear serial buffer to avoid any residual data
+    bool connectToWifi();                                                                                                     // Connect to Wifi using the loaded SSID and Password
+    String delete_request(String url, String payload);                                                                        // Delete request
+    String delete_request(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize);  // Delete request with headers
+    String get(String url);                                                                                                   // Get request
+    String get(String url, const char *headerKeys[], const char *headerValues[], int headerSize);                             // Get request with headers
+    String getIPAddress() { return WiFi.localIP().toString(); }                                                               // get IP addresss
+    bool isConnectedToWifi() { return WiFi.status() == WL_CONNECTED; }                                                        // Check if the Dev Board is connected to Wifi
+    bool loadWifiSettings();                                                                                                  // Load Wifi settings from storage
+    String post(String url, String payload);                                                                                  // Post request
+    String post(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize);            // Post request with headers
+    String put(String url, String payload);                                                                                   // Put request
+    String put(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize);             // Put request with headers
+    bool saveWifiSettings(String data);                                                                                       // Save and Load settings to and from storage
+    String scanWifiNetworks();                                                                                                // returns a string of all wifi networks
+    void setup();                                                                                                             // Arduino setup function
+    bool stream_bytes_get(String url, const char *headerKeys[], const char *headerValues[], int headerSize);                  // Get request to process bytes
+    bool stream_bytes_post(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize); // Post request to process bytes
+    String readSerialLine();                                                                                                  // Read serial data until newline character
+    bool read_serial_settings(String receivedData, bool connectAfterSave);                                                    // Read the serial data and save the settings
+    bool upload_bytes(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize);      // Upload bytes to server
 
     void loop(); // Main loop for flipper-http.ino that handles all of the commands
 private:
@@ -76,6 +75,14 @@ private:
     char loadedPassword[64] = {0};                       // Variable to store password
     bool useLED = true;                                  // Variable to control LED usage
     WiFiClientSecure client;                             // WiFiClientSecure object for secure connections
+    LED led;                                             // EasyLED object to control the LED
+
+#ifdef BOARD_VGM
+    UART uart;   // UART object to handle serial communication
+    UART uart_2; // UART object to handle serial communication
+#else
+    UART uart; // UART object to handle serial communication
+#endif
 
     // Root CA from letsencrypt
     // get it here: https://letsencrypt.org/certificates/
