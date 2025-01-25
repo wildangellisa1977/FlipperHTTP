@@ -340,7 +340,7 @@ bool FlipperHTTP::loadWifiSettings()
     String fileContent = file.readString();
     file.close();
 
-    DynamicJsonDocument doc(2048);
+    JsonDocument doc;
     DeserializationError error = deserializeJson(doc, fileContent);
 
     if (error)
@@ -641,7 +641,7 @@ String FlipperHTTP::put(String url, String payload)
 // Save WiFi settings to storage
 bool FlipperHTTP::saveWifiSettings(String jsonData)
 {
-    DynamicJsonDocument doc(1024);
+    JsonDocument doc;
     DeserializationError error = deserializeJson(doc, jsonData);
 
     if (error)
@@ -654,7 +654,7 @@ bool FlipperHTTP::saveWifiSettings(String jsonData)
     const char *newPassword = doc["password"];
 
     // Load existing settings if they exist
-    DynamicJsonDocument existingDoc(2048);
+    JsonDocument existingDoc;
 #ifdef BOARD_PICO_W
     File file = LittleFS.open(settingsFilePath, "r");
 #elif BOARD_PICO_2W
@@ -1241,7 +1241,7 @@ bool FlipperHTTP::stream_bytes_post(String url, String payload, const char *head
 
 bool FlipperHTTP::read_serial_settings(String receivedData, bool connectAfterSave)
 {
-    DynamicJsonDocument doc(1024);
+    JsonDocument doc;
     DeserializationError error = deserializeJson(doc, receivedData);
 
     if (error)
@@ -1466,7 +1466,7 @@ void FlipperHTTP::loop()
                 this->uart.println("[ERROR] GET request failed or returned empty data.");
                 return;
             }
-            DynamicJsonDocument doc(1024);
+            JsonDocument doc;
             DeserializationError error = deserializeJson(doc, jsonData);
             if (error)
             {
@@ -1619,7 +1619,7 @@ void FlipperHTTP::loop()
             String jsonData = _data.substring(strlen("[GET/HTTP]"));
             jsonData.trim();
 
-            DynamicJsonDocument doc(1024);
+            JsonDocument doc;
             DeserializationError error = deserializeJson(doc, jsonData);
 
             if (error)
@@ -1683,7 +1683,7 @@ void FlipperHTTP::loop()
             String jsonData = _data.substring(strlen("[POST/HTTP]"));
             jsonData.trim();
 
-            DynamicJsonDocument doc(1024);
+            JsonDocument doc;
             DeserializationError error = deserializeJson(doc, jsonData);
 
             if (error)
@@ -1748,7 +1748,7 @@ void FlipperHTTP::loop()
             String jsonData = _data.substring(strlen("[PUT/HTTP]"));
             jsonData.trim();
 
-            DynamicJsonDocument doc(1024);
+            JsonDocument doc;
             DeserializationError error = deserializeJson(doc, jsonData);
 
             if (error)
@@ -1813,7 +1813,7 @@ void FlipperHTTP::loop()
             String jsonData = _data.substring(strlen("[DELETE/HTTP]"));
             jsonData.trim();
 
-            DynamicJsonDocument doc(1024);
+            JsonDocument doc;
             DeserializationError error = deserializeJson(doc, jsonData);
 
             if (error)
@@ -1878,7 +1878,7 @@ void FlipperHTTP::loop()
             String jsonData = _data.substring(strlen("[GET/BYTES]"));
             jsonData.trim();
 
-            DynamicJsonDocument doc(1024);
+            JsonDocument doc;
             DeserializationError error = deserializeJson(doc, jsonData);
 
             if (error)
@@ -1933,7 +1933,7 @@ void FlipperHTTP::loop()
             String jsonData = _data.substring(strlen("[POST/BYTES]"));
             jsonData.trim();
 
-            DynamicJsonDocument doc(1024);
+            JsonDocument doc;
             DeserializationError error = deserializeJson(doc, jsonData);
 
             if (error)
@@ -1984,7 +1984,7 @@ void FlipperHTTP::loop()
             String jsonData = _data.substring(strlen("[PARSE]"));
             jsonData.trim();
 
-            DynamicJsonDocument doc(1024);
+            JsonDocument doc;
             DeserializationError error = deserializeJson(doc, jsonData);
 
             if (error)
@@ -2025,7 +2025,7 @@ void FlipperHTTP::loop()
             String jsonData = _data.substring(strlen("[PARSE/ARRAY]"));
             jsonData.trim();
 
-            DynamicJsonDocument doc(1024);
+            JsonDocument doc;
             DeserializationError error = deserializeJson(doc, jsonData);
 
             if (error)
