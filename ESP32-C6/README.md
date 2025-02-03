@@ -7,11 +7,11 @@
 6. Navigate to `SD Card/apps_data/esp_flasher/`. If the folder doesn’t exist, create it yourself or run the ESP Flasher app once.
 7. Drag all three bin files you downloaded earlier into the directory.
 8. Disconnect your Flipper from your computer then turn off your Flipper.
-9. Connect your ESP32-C6 into the Flipper then turn on your Flipper.
+9. Connect your ESP32-C6 into the Flipper then turn on your Flipper. (Optionally, turn on your Flipper first. Then, hold the `BOOT` button while connecting your ESP32-C6. If you do this, when you get to step 11, you can skip the `Reset Board` and `Enter Bootloader` steps.)
 10. Open the ESP Flasher app on your Flipper, it should be located in the `Apps->GPIO` folder from the main menu. 
 11. In the ESP Flasher app, select the following options:
     - `Reset Board`: wait a few seconds, then go back.
-    - `Enter Bootloader`: wait until the 'waiting for download' message appears, then go back.
+    - `Enter Bootloader`: wait until the `waiting for download` message appears, then go back.
     - `Flash ESP`: if you do not see this option at the top of the main menu, then click `Manual Flash`.
 12. Click on `Select if using S3`.
 13. Click on `Bootloader (0x0)` and select the `flipper_http_bootloader_esp32_c6.bin` that you downloaded earlier.
