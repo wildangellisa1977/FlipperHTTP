@@ -231,7 +231,7 @@ def flipper_http_get_request_bytes(url: str, headers: str) -> bytes:
     return b""
 
 
-def flipper_http_post_request_with_headers(url: str, headers: str, data: str):
+def flipper_http_post_request_with_headers(url: str, headers: str, data: str) -> str:
     """Send a POST request to the specified URL with headers and data"""
     if url is None:
         return ""
@@ -252,7 +252,7 @@ def flipper_http_post_request_with_headers(url: str, headers: str, data: str):
     return ""
 
 
-def flipper_http_post_request_bytes(url: str, headers: str, data: str):
+def flipper_http_post_request_bytes(url: str, headers: str, data: str) -> bytes:
     """Send a POST request to the specified URL with headers and data"""
     if url is None:
         return b""
@@ -273,7 +273,7 @@ def flipper_http_post_request_bytes(url: str, headers: str, data: str):
     return b""
 
 
-def flipper_http_put_request_with_headers(url: str, headers: str, data: str):
+def flipper_http_put_request_with_headers(url: str, headers: str, data: str) -> str:
     """Send a PUT request to the specified URL with headers and data"""
     if url is None:
         return ""
@@ -294,7 +294,7 @@ def flipper_http_put_request_with_headers(url: str, headers: str, data: str):
     return ""
 
 
-def flipper_http_delete_request_with_headers(url: str, headers: str, data: str):
+def flipper_http_delete_request_with_headers(url: str, headers: str, data: str) -> str:
     """Send a DELETE request to the specified URL with headers and data"""
     if url is None:
         return ""
@@ -313,3 +313,30 @@ def flipper_http_delete_request_with_headers(url: str, headers: str, data: str):
         return data
     clear_buffer()
     return ""
+
+
+def flipper_http_websocket_start(url: str, port: int, headers: str) -> str:
+    """Start a WebSocket connection to the specified URL and port with headers"""
+    if url or port is None:
+        return ""
+    flipper_http_send_data(
+        '[SOCKET/START]{"url":"'
+        + url
+        + '","port":'
+        + port
+        + ',"headers":'
+        + headers
+        + "}"
+    )
+    if "[ERROR]" not in flipper_http_read_data():
+        data = flipper_http_read_data(500)
+        clear_buffer()
+        return data
+    clear_buffer()
+    return ""
+
+
+def flipper_http_websocket_stop() -> None:
+    """Stop the WebSocket connection"""
+    flipper_http_send_data("[SOCKET/STOP]")
+    clear_buffer()

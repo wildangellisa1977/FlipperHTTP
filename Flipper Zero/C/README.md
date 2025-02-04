@@ -31,18 +31,21 @@
 | `flipper_http_worker`                       | `int32_t`        | `void *context`                                                                                             | Worker thread to handle UART data asynchronously. Returns `0` upon completion.                     |
 | `get_timeout_timer_callback`                | `void`           | `void *context`                                                                                             | Callback function invoked when a GET request times out.                                           |
 | `_flipper_http_rx_callback`                 | `void`           | `FuriHalSerialHandle *handle`, `FuriHalSerialRxEvent event`, `void *context`                                | Private callback function to handle received UART data asynchronously.                            |
-| `flipper_http_process_response_async`        | `bool`           | `FlipperHTTP *fhttp`, `bool (*http_request)(void)`, `bool (*parse_json)(void)`                            | Processes requests and parses JSON data asynchronously. Returns `true` if successful.             |
-| `flipper_http_loading_task`                  | `void`           | `FlipperHTTP *fhttp`, `bool (*http_request)(void)`, `bool (*parse_response)(void)`, `uint32_t success_view_id`, `uint32_t failure_view_id`, `ViewDispatcher **view_dispatcher` | Performs a task while displaying a loading screen, handling success and failure views accordingly. |
+| `flipper_http_process_response_async`       | `bool`           | `FlipperHTTP *fhttp`, `bool (*http_request)(void)`, `bool (*parse_json)(void)`                            | Processes requests and parses JSON data asynchronously. Returns `true` if successful.             |
+| `flipper_http_loading_task`                 | `void`           | `FlipperHTTP *fhttp`, `bool (*http_request)(void)`, `bool (*parse_response)(void)`, `uint32_t success_view_id`, `uint32_t failure_view_id`, `ViewDispatcher **view_dispatcher` | Performs a task while displaying a loading screen, handling success and failure views accordingly. |
+| `flipper_http_websocket_start`              | `bool`           | `FlipperHTTP *fhttp`, `const char *url`, `uint16_t port`, `const char *headers`                              | Sends a request to start a WebSocket connection to the specified URL and port using the provided headers. Returns `true` if successful. |
+| `flipper_http_websocket_stop`               | `bool`           | `FlipperHTTP *fhttp`                                                                                        | Sends a request to stop the WebSocket connection. Returns `true` if successful.                    |
+
+---
 
 **Note:**  
-- In C, `fhttp.last_response` holds the received data.
+- In C, `fhttp->last_response` holds the received data.
 - Ensure that the `FlipperHTTP *fhttp` context is properly allocated using `flipper_http_alloc()` before invoking these functions and deallocated using `flipper_http_free()` when done.
 - Callback functions handle asynchronous data reception and should be implemented as per your application's requirements.
 
 ---
 
 ### Additional Information
-
 
 Before using any of the HTTP functions, allocate and initialize the `FlipperHTTP` context:
 
@@ -58,5 +61,3 @@ After completing all operations, free the context:
 ```c
 flipper_http_free(fhttp);
 ```
-
-Received data is stored in `fhttp->last_response` asynchronously.

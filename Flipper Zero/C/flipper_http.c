@@ -1814,3 +1814,77 @@ void flipper_http_loading_task(FlipperHTTP *fhttp,
     view_dispatcher_remove_view(*view_dispatcher, loading_view_id);
     loading_free(loading); // comment this out if you experience a freeze
 }
+
+// Function to start a WebSocket connection
+/**
+ * @brief      Send a request to the specified URL to start a WebSocket connection.
+ * @return     true if the request was successful, false otherwise.
+ * @param fhttp The FlipperHTTP context
+ * @param      url  The URL to send the WebSocket request to.
+ * @param port The port to connect to
+ * @param headers The headers to send with the WebSocket request
+ * @note       The received data will be handled asynchronously via the callback.
+ */
+bool flipper_http_websocket_start(FlipperHTTP *fhttp, const char *url, uint16_t port, const char *headers)
+{
+    if (!fhttp)
+    {
+        FURI_LOG_E(HTTP_TAG, "Failed to get context.");
+        return false;
+    }
+    if (!url || !headers)
+    {
+        FURI_LOG_E("FlipperHTTP", "Invalid arguments provided to flipper_http_websocket_start.");
+        return false;
+    }
+
+    // Prepare WebSocket request command with headers
+    char command[256];
+    int ret = snprintf(
+        command,
+        sizeof(command),
+        "[SOCKET/START]{\"url\":\"%s\",\"port\":%d,\"headers\":%s}",
+        url,
+        port,
+        headers);
+    if (ret < 0 || ret >= (int)sizeof(command))
+    {
+        FURI_LOG_E("FlipperHTTP", "Failed to format WebSocket start command with headers.");
+        return false;
+    }
+
+    // Send WebSocket request via UART
+    if (!flipper_http_send_data(fhttp, command))
+    {
+        FURI_LOG_E("FlipperHTTP", "Failed to send WebSocket start command with headers.");
+        return false;
+    }
+
+    // The response will be handled asynchronously via the callback
+    return true;
+}
+
+// Function to stop a WebSocket connection
+/**
+ * @brief      Send a request to stop the WebSocket connection.
+ * @return     true if the request was successful, false otherwise.
+ * @param fhttp The FlipperHTTP context
+ * @note       The received data will be handled asynchronously via the callback.
+ */
+bool flipper_http_websocket_stop(FlipperHTTP *fhttp)
+{
+    if (!fhttp)
+    {
+        FURI_LOG_E(HTTP_TAG, "Failed to get context.");
+        return false;
+    }
+
+    if (!flipper_http_send_data(fhttp, "[SOCKET/STOP]"))
+    {
+        FURI_LOG_E("FlipperHTTP", "Failed to send WebSocket stop command.");
+        return false;
+    }
+
+    // The response will be handled asynchronously via the callback
+    return true;
+}

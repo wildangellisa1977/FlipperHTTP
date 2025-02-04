@@ -27,6 +27,7 @@ Change Log:
     - Created a LED class to handle LED actions for all supported boards
     - Created an UART class to handle Serial actions for all supported boards
     - Combined source files from all supported boards into one file
+- 2025-02-03: Added WebSockets support: [SOCKET/START] and [SOCKET/STOP]
 */
 #pragma once
 #include <WiFi.h>
@@ -34,6 +35,7 @@ Change Log:
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
 #include <Arduino.h>
+#include <ArduinoHttpClient.h>
 #include "led.h"
 #include "uart.h"
 

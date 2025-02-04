@@ -337,6 +337,30 @@ let fhttp = {
         this.clear_buffer(); // Clear the buffer
         return "";
     },
+    // start a WebSocket connection
+    websocket_start: function (url, port, headers) {
+        serial.write('[SOCKET/START]{"url":"' + url + '","port":' + port + ',"headers":' + headers + '}');
+        let response = this.read_data(500);
+        if (response === undefined) {
+            this.clear_buffer(false); // Clear the buffer
+            return false;
+        }
+        let sresponse = this.to_string(response);
+        if (!this.includes(sresponse, "[ERROR]")) {
+            this.clear_buffer(false); // Clear the buffer
+            return true;
+        }
+        else {
+            print("WebSocket connection failed");
+        }
+        this.clear_buffer(); // Clear the buffer
+        return false;
+    },
+    // stop a WebSocket connection
+    websocket_stop: function () {
+        serial.write('[SOCKET/STOP]');
+        return true;
+    },
     // Helper function to check if a string contains another string
     includes: function (text, search) {
         let stringLength = text.length;

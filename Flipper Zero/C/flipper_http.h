@@ -405,3 +405,24 @@ void flipper_http_loading_task(FlipperHTTP *fhttp,
                                uint32_t success_view_id,
                                uint32_t failure_view_id,
                                ViewDispatcher **view_dispatcher);
+
+// Function to start a WebSocket connection
+/**
+ * @brief      Send a request to the specified URL to start a WebSocket connection.
+ * @return     true if the request was successful, false otherwise.
+ * @param fhttp The FlipperHTTP context
+ * @param      url  The URL to send the WebSocket request to.
+ * @param port The port to connect to
+ * @param headers The headers to send with the WebSocket request
+ * @note       The received data will be handled asynchronously via the callback.
+ */
+bool flipper_http_websocket_start(FlipperHTTP *fhttp, const char *url, uint16_t port, const char *headers);
+
+// Function to stop a WebSocket connection
+/**
+ * @brief      Send a request to stop the WebSocket connection.
+ * @return     true if the request was successful, false otherwise.
+ * @param fhttp The FlipperHTTP context
+ * @note       The received data will be handled asynchronously via the callback.
+ */
+bool flipper_http_websocket_stop(FlipperHTTP *fhttp);

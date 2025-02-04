@@ -3,7 +3,7 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over tthis->uart.
 Created: 2024-09-30
-Updated: 2025-01-19
+Updated: 2025-02-03
 */
 
 #include "FlipperHTTP.h"
@@ -2054,6 +2054,95 @@ void FlipperHTTP::loop()
             {
                 this->uart.println("[ERROR] Key not found in JSON.");
             }
+        }
+        // websocket
+        else if (_data.startsWith("[SOCKET/START]"))
+        {
+            // extract the JSON by removing the command part
+            String jsonData = _data.substring(strlen("[SOCKET/START]"));
+            jsonData.trim();
+
+            JsonDocument doc;
+            DeserializationError error = deserializeJson(doc, jsonData);
+
+            if (error)
+            {
+                this->uart.print("[ERROR] Failed to parse JSON.");
+                this->led.off();
+                return;
+            }
+
+            // Extract values from JSON
+            if (!doc.containsKey("url"))
+            {
+                this->uart.println("[ERROR] JSON does not contain url.");
+                this->led.off();
+                return;
+            }
+            const char *url = doc["url"];
+            if (!doc.containsKey("port"))
+            {
+                this->uart.println("[ERROR] JSON does not contain port.");
+                this->led.off();
+                return;
+            }
+            int port = doc["port"];
+
+            // Extract headers if available
+            const char *headerKeys[10];
+            const char *headerValues[10];
+            int headerSize = 0;
+
+            if (doc.containsKey("headers"))
+            {
+                JsonObject headers = doc["headers"];
+                for (JsonPair header : headers)
+                {
+                    headerKeys[headerSize] = header.key().c_str();
+                    headerValues[headerSize] = header.value();
+                    headerSize++;
+                }
+            }
+
+            // start the websocket
+            WebSocketClient ws = WebSocketClient(this->client, url, port);
+
+            // Begin the WebSocket connection (performs the handshake)
+            ws.begin();
+
+            // Check if a message is available from the server:
+            if (ws.parseMessage() > 0)
+            {
+                // Read the message from the server
+                String message = ws.readString();
+                this->uart.println(message);
+            }
+
+            // wait for incoming serial/client data, and send back-n-forth
+            String uartMessage = "";
+            String wsMessage = "";
+            while (ws.connected() && !uartMessage.startsWith("[SOCKET/STOP]"))
+            {
+                // Check if there's incoming serial data
+                if (this->uart.available() > 0)
+                {
+                    // Read the incoming serial data until newline
+                    uartMessage = this->uart.read_serial_line();
+                    ws.beginMessage(TYPE_TEXT);
+                    ws.print(uartMessage);
+                    ws.endMessage();
+                }
+
+                // Check if there's incoming websocket data
+                if (ws.parseMessage() > 0)
+                {
+                    // Read the message from the server
+                    wsMessage = ws.readString();
+                    this->uart.println(wsMessage);
+                }
+            }
+            // Close the WebSocket connection
+            ws.stop();
         }
 
         this->led.off();

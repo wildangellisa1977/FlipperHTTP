@@ -23,3 +23,5 @@
 | `fhttp.post_request_with_headers`      | `string`         | `url: string`, `headers: string`, `payload: string` | Sends a POST request with specified headers and payload, returning the response.                     |
 | `fhttp.put_request_with_headers`       | `string`         | `url: string`, `headers: string`, `payload: string` | Sends a PUT request with specified headers and payload, returning the response.                      |
 | `fhttp.delete_request_with_headers`    | `string`         | `url: string`, `headers: string`, `payload: string` | Sends a DELETE request with specified headers and payload, returning the response.                   |
+| `fhttp.websocket_start`                | `bool`           | `url: string`, `port: number`, `headers: string`      | Sends a command to start a WebSocket connection using the specified URL, port, and headers. Returns `true` if successful. |
+| `fhttp.websocket_stop`                 | `bool`           | None                                                | Sends a command to stop the WebSocket connection. Returns `true` if the command is executed.          |
