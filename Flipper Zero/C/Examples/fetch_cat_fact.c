@@ -1,5 +1,5 @@
 #include <flipper_http/flipper_http.h>
-
+#define TAG "Example"
 int32_t main(void *p)
 {
     // Suppress unused parameter warning
@@ -14,7 +14,7 @@ int32_t main(void *p)
     }
 
     // Try to wait for pong response.
-    if (!flipper_http_ping())
+    if (!flipper_http_ping(fhttp))
     {
         FURI_LOG_E(TAG, "Failed to ping the device");
         return -1;
