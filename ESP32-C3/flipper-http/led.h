@@ -46,4 +46,21 @@ struct RGB
 constexpr RGB COLOR_OFF = {0, 0, 0};
 constexpr RGB COLOR_GREEN = {0, 255, 0};
 #endif
+#elif BOARD_ESP32_C3
+#include <Adafruit_NeoPixel.h>
+
+// The LED pin may differ for whatever board you are using
+constexpr uint8_t LED_PIN = 8;
+constexpr uint8_t NUM_LEDS = 1;
+
+// Use extern declaration:
+extern Adafruit_NeoPixel rgbLed;
+
+struct RGB
+{
+    uint8_t r, g, b;
+};
+
+constexpr RGB COLOR_OFF = {0, 0, 0};
+constexpr RGB COLOR_GREEN = {0, 255, 0};
 #endif
