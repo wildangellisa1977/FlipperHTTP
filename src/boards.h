@@ -10,4 +10,4 @@
 // #define BOARD_PICO_W 6       // Raspberry Pi Pico W
 // #define BOARD_PICO_2W 7      // Raspberry Pi Pico W
 // #define BOARD_VGM 8 // Raspberry Pi Pico
-#define BOARD_ESP32_C3 9 // ESP32C3 Dev Module
+// #define BOARD_ESP32_C3 9 // ESP32C3 Dev Module
