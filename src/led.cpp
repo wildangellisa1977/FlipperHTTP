@@ -88,6 +88,13 @@ void LED::blink(int timeout)
     // turn off GREEN
     digitalWrite(LED_BUILTIN, OFF);
     delay(timeout);
+#elif BOARD_ESP32_C3
+    // turn on GREEN
+    digitalWrite(8, ON); // GREEN
+    delay(timeout);
+    // turn off GREEN
+    digitalWrite(8, OFF); // GREEN
+    delay(timeout);
 #endif
 }
 
@@ -128,6 +135,8 @@ void LED::start()
     pinMode(LED_BUILTIN, OUTPUT); // Set Green Pin mode as output
 #elif BOARD_VGM
     pinMode(LED_BUILTIN, OUTPUT); // Set Green Pin mode as output
+#elif BOARD_ESP32_C3
+    pinMode(8, OUTPUT); // Set Green Pin mode as output
 #endif
     this->blink();
     this->blink();
@@ -164,6 +173,8 @@ void LED::on()
     digitalWrite(LED_BUILTIN, ON); // GREEN
 #elif BOARD_VGM
     digitalWrite(LED_BUILTIN, ON); // GREEN
+#elif BOARD_ESP32_C3
+    digitalWrite(8, ON); // GREEN
 #endif
 }
 
@@ -197,5 +208,7 @@ void LED::off()
     digitalWrite(LED_BUILTIN, OFF); // GREEN
 #elif BOARD_VGM
     digitalWrite(LED_BUILTIN, OFF); // GREEN
+#elif BOARD_ESP32_C3
+    digitalWrite(8, OFF); // GREEN
 #endif
 }
