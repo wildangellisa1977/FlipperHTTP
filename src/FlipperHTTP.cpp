@@ -36,7 +36,7 @@ bool FlipperHTTP::connectToWifi()
 
     WiFi.disconnect(true); // Ensure WiFi is disconnected before reconnecting
     WiFi.begin(loadedSSID, loadedPassword);
-#fdef BOARD_ESP32_C3
+#ifdef BOARD_ESP32_C3
     WiFi.setTxPower(WIFI_POWER_8_5dBm);
 #endif
 
