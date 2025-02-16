@@ -3,7 +3,7 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over serial.
 Created: 2024-09-30
-Updated: 2025-01-19
+Updated: 2025-02-16
 
 Change Log:
 - 2024-09-30: Initial commit
@@ -28,6 +28,7 @@ Change Log:
     - Created an UART class to handle Serial actions for all supported boards
     - Combined source files from all supported boards into one file
 - 2025-02-03: Added WebSockets support: [SOCKET/START] and [SOCKET/STOP]
+- 2025-02-16: Added support for the ESP32-C3 board (@dj1ch)
 */
 #pragma once
 #include <WiFi.h>
