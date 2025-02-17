@@ -43,7 +43,7 @@ The FlipperHTTP firmware supports eight boards. Instructions for each board can 
 - **ESP32-S3:** [https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-S3](https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-S3)
 - **ESP32-WROOM:** [https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-WROOM](https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-WROOM)
 - **ESP32-WROVER:** [https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-WROVER](https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-WROVER)
-- **ESP32-C3:** [https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-WROVER](https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-C3)
+- **ESP32-C3:** [https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-C3](https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-C3)
 
 
 ## Wiring
@@ -79,12 +79,6 @@ Raspberry Pi Zero 2 W -> Flipper
 - GND (Pin 6) -> Pin 11 (GND)
 - Do NOT connect 3v3 or 5v (power via USB cable instead)
 
-ESP32-C3 -> Flipper
-- TX (GPIO 21 - Pin 6) -> Pin 14 (RX)
-- RX (GPIO 20 - Pin 7) -> Pin 13 (TX)
-- 3v3 -> Pin 9 (3v3)
-- GND -> Pin 11 (GND)
-
 ## Video Game Module Wiring
 How to make a custom attachment for the VGM: https://www.youtube.com/watch?v=iNwOJzZCplc
 
@@ -111,9 +105,3 @@ Raspberry Pi Zero 2 W -> Video Game Module
 - RX (GPIO 15 - Pin 10) -> Pin 24 (TX)
 - GND (Pin 6) -> Pin 11 (GND)
 - Do NOT connect 3v3 or 5v (power via USB cable instead)
-
-ESP32-C3 -> Flipper
-- TX (GPIO 21 - Pin 6) -> Pin 21 (RX)
-- RX (GPIO 20 - Pin 7) -> Pin 24 (TX)
-- 3v3 -> Pin 9 (3v3)
-- GND -> Pin 11 (GND)
