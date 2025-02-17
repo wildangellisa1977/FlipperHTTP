@@ -3,7 +3,7 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over tthis->uart.
 Created: 2024-09-30
-Updated: 2025-02-03
+Updated: 2025-02-16
 */
 
 #include "FlipperHTTP.h"
@@ -36,6 +36,9 @@ bool FlipperHTTP::connectToWifi()
 
     WiFi.disconnect(true); // Ensure WiFi is disconnected before reconnecting
     WiFi.begin(loadedSSID, loadedPassword);
+#ifdef BOARD_ESP32_C3
+    WiFi.setTxPower(WIFI_POWER_8_5dBm);
+#endif
 
     int i = 0;
     while (!this->isConnectedToWifi() && i < 20)
