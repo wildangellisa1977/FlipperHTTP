@@ -68,7 +68,6 @@ public:
     void setup();                                                                                                             // Arduino setup function
     bool stream_bytes_get(String url, const char *headerKeys[], const char *headerValues[], int headerSize);                  // Get request to process bytes
     bool stream_bytes_post(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize); // Post request to process bytes
-    String readSerialLine();                                                                                                  // Read serial data until newline character
     bool read_serial_settings(String receivedData, bool connectAfterSave);                                                    // Read the serial data and save the settings
     bool upload_bytes(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize);      // Upload bytes to server
 
