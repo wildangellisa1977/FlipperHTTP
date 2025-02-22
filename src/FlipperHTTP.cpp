@@ -3,7 +3,7 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over tthis->uart.
 Created: 2024-09-30
-Updated: 2025-02-21
+Updated: 2025-02-22
 */
 
 #include "FlipperHTTP.h"
@@ -62,86 +62,6 @@ bool FlipperHTTP::connectToWifi()
     }
 }
 
-String FlipperHTTP::request(
-    const char *method,
-    String url,
-    String payload,
-    const char *headerKeys[],
-    const char *headerValues[],
-    int headerSize)
-{
-    HTTPClient http;
-    String response = "";
-
-    http.collectHeaders(headerKeys, headerSize);
-
-    if (http.begin(this->client, url))
-    {
-        for (int i = 0; i < headerSize; i++)
-        {
-            http.addHeader(headerKeys[i], headerValues[i]);
-        }
-
-        if (payload == "")
-        {
-            payload = "{}";
-        }
-
-        int httpCode = http.sendRequest(method, payload);
-
-        if (httpCode > 0)
-        {
-            response = http.getString();
-            http.end();
-            return response;
-        }
-        else
-        {
-            if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
-            {
-                this->uart.print(F("[ERROR] Request Failed, error: "));
-                this->uart.println(F(http.errorToString(httpCode).c_str()));
-            }
-            else // certification failed?
-            {
-                // send request without SSL
-                http.end();
-                this->client.setInsecure();
-                if (http.begin(this->client, url))
-                {
-                    for (int i = 0; i < headerSize; i++)
-                    {
-                        http.addHeader(headerKeys[i], headerValues[i]);
-                    }
-                    int newCode = http.sendRequest(method, payload);
-                    if (newCode > 0)
-                    {
-                        response = http.getString();
-                        http.end();
-                        this->client.setCACert(this->root_ca);
-                        return response;
-                    }
-                    else
-                    {
-                        this->client.setCACert(this->root_ca);
-                        this->uart.println(F("[ERROR] Request Failed"));
-                    }
-                }
-            }
-        }
-        http.end();
-    }
-    else
-    {
-        this->uart.println(F("[ERROR] Unable to connect to the server."));
-    }
-
-    // Clear serial buffer to avoid any residual data
-    this->clearSerialBuffer();
-
-    return response;
-}
-
 // Load WiFi settings from SPIFFS and attempt to connect
 bool FlipperHTTP::loadWifiSettings()
 {
@@ -197,6 +117,92 @@ bool FlipperHTTP::loadWifiSettings()
     }
 
     return false;
+}
+
+String FlipperHTTP::request(
+    const char *method,
+    String url,
+    String payload,
+    const char *headerKeys[],
+    const char *headerValues[],
+    int headerSize)
+{
+    HTTPClient http;
+    String response = "";
+
+    http.collectHeaders(headerKeys, headerSize);
+
+    if (http.begin(this->client, url))
+    {
+        for (int i = 0; i < headerSize; i++)
+        {
+            http.addHeader(headerKeys[i], headerValues[i]);
+        }
+
+        if (payload == "")
+        {
+            payload = "{}";
+        }
+
+        int statusCode = http.sendRequest(method, payload);
+        char headerResponse[512];
+
+        if (statusCode > 0)
+        {
+            snprintf(headerResponse, sizeof(headerResponse), "[%s/SUCCESS]{\"Status-Code\":%d,\"Content-Length\":%d}", method, statusCode, http.getSize());
+            this->uart.println(headerResponse);
+            response = http.getString();
+            http.end();
+            return response;
+        }
+        else
+        {
+            if (statusCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
+            {
+                snprintf(headerResponse, sizeof(headerResponse), "[ERROR] %s Request Failed, error: %s", method, http.errorToString(statusCode).c_str());
+                this->uart.println(headerResponse);
+            }
+            else // certification failed?
+            {
+                // send request without SSL
+                http.end();
+                this->client.setInsecure();
+                if (http.begin(this->client, url))
+                {
+                    for (int i = 0; i < headerSize; i++)
+                    {
+                        http.addHeader(headerKeys[i], headerValues[i]);
+                    }
+                    int newCode = http.sendRequest(method, payload);
+                    if (newCode > 0)
+                    {
+                        snprintf(headerResponse, sizeof(headerResponse), "[%s/SUCCESS]{\"Status-Code\":%d,\"Content-Length\":%d}", method, newCode, http.getSize());
+                        this->uart.println(headerResponse);
+                        response = http.getString();
+                        http.end();
+                        this->client.setCACert(root_ca);
+                        return response;
+                    }
+                    else
+                    {
+                        this->client.setCACert(root_ca);
+                        snprintf(headerResponse, sizeof(headerResponse), "[ERROR] %s Request Failed, error: %s", method, http.errorToString(newCode).c_str());
+                        this->uart.println(headerResponse);
+                    }
+                }
+            }
+        }
+        http.end();
+    }
+    else
+    {
+        this->uart.println(F("[ERROR] Unable to connect to the server."));
+    }
+
+    // Clear serial buffer to avoid any residual data
+    this->clearSerialBuffer();
+
+    return response;
 }
 
 // Save WiFi settings to storage
@@ -364,7 +370,7 @@ void FlipperHTTP::setup()
     this->useLED = true;
     this->led.start();
     this->loadWifiSettings();
-    this->client.setCACert(this->root_ca);
+    this->client.setCACert(root_ca);
     this->uart.flush();
 }
 
@@ -387,18 +393,13 @@ bool FlipperHTTP::stream_bytes(const char *method, String url, String payload, c
         }
 
         int httpCode = http.sendRequest(method, payload);
+        int len = http.getSize(); // Get the response content length
+        char headerResponse[256];
         if (httpCode > 0)
         {
-            if (strcmp(method, "GET") == 0)
-            {
-                this->uart.println(F("[GET/SUCCESS]"));
-            }
-            else
-            {
-                this->uart.println(F("[POST/SUCCESS]"));
-            }
-            int len = http.getSize(); // Get the response content length
-            uint8_t buff[512] = {0};  // Buffer for reading data
+            snprintf(headerResponse, sizeof(headerResponse), "[%s/SUCCESS]{\"Status-Code\":%d,\"Content-Length\":%d}", method, httpCode, len);
+            this->uart.println(headerResponse);
+            uint8_t buff[512] = {0}; // Buffer for reading data
 
             WiFiClient *stream = http.getStreamPtr();
 
@@ -473,11 +474,11 @@ bool FlipperHTTP::stream_bytes(const char *method, String url, String payload, c
             this->uart.println();
             if (strcmp(method, "GET") == 0)
             {
-                this->uart.println("[GET/END]");
+                this->uart.println(F("[GET/END]"));
             }
             else
             {
-                this->uart.println("[POST/END]");
+                this->uart.println(F("[POST/END]"));
             }
             return true;
         }
@@ -485,8 +486,8 @@ bool FlipperHTTP::stream_bytes(const char *method, String url, String payload, c
         {
             if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
             {
-                this->uart.print(F("[ERROR] Request Failed, error: "));
-                this->uart.println(F(http.errorToString(httpCode).c_str()));
+                snprintf(headerResponse, sizeof(headerResponse), "[ERROR] %s Request Failed, error: %s", method, http.errorToString(httpCode).c_str());
+                this->uart.println(headerResponse);
             }
             else // certification failed?
             {
@@ -500,18 +501,12 @@ bool FlipperHTTP::stream_bytes(const char *method, String url, String payload, c
                         http.addHeader(headerKeys[i], headerValues[i]);
                     }
                     int newCode = http.sendRequest(method, payload);
+                    int len = http.getSize(); // Get the response content length
                     if (newCode > 0)
                     {
-                        if (strcmp(method, "GET") == 0)
-                        {
-                            this->uart.println(F("[GET/SUCCESS]"));
-                        }
-                        else
-                        {
-                            this->uart.println(F("[POST/SUCCESS]"));
-                        }
-                        int len = http.getSize(); // Get the response content length
-                        uint8_t buff[512] = {0};  // Buffer for reading data
+                        snprintf(headerResponse, sizeof(headerResponse), "[%s/SUCCESS]{\"Status-Code\":%d,\"Content-Length\":%d}", method, newCode, len);
+                        this->uart.println(headerResponse);
+                        uint8_t buff[512] = {0}; // Buffer for reading data
 
                         WiFiClient *stream = http.getStreamPtr();
 
@@ -529,7 +524,7 @@ bool FlipperHTTP::stream_bytes(const char *method, String url, String payload, c
                         {
                             this->uart.println(F("[ERROR] Not enough memory to start processing the response."));
                             http.end();
-                            this->client.setCACert(this->root_ca);
+                            this->client.setCACert(root_ca);
                             return false;
                         }
 
@@ -577,7 +572,7 @@ bool FlipperHTTP::stream_bytes(const char *method, String url, String payload, c
                         {
                             this->uart.println(F("[ERROR] Not enough memory to continue processing the response."));
                             http.end();
-                            this->client.setCACert(this->root_ca);
+                            this->client.setCACert(root_ca);
                             return false;
                         }
 
@@ -587,22 +582,23 @@ bool FlipperHTTP::stream_bytes(const char *method, String url, String payload, c
                         this->uart.println();
                         if (strcmp(method, "GET") == 0)
                         {
-                            this->uart.println("[GET/END]");
+                            this->uart.println(F("[GET/END]"));
                         }
                         else
                         {
-                            this->uart.println("[POST/END]");
+                            this->uart.println(F("[POST/END]"));
                         }
-                        this->client.setCACert(this->root_ca);
+                        this->client.setCACert(root_ca);
                         return true;
                     }
                     else
                     {
-                        this->client.setCACert(this->root_ca);
-                        this->uart.printf("[ERROR] Request failed with error: %s\n", http.errorToString(httpCode).c_str());
+                        this->client.setCACert(root_ca);
+                        snprintf(headerResponse, sizeof(headerResponse), "[ERROR] %s Request Failed, error: %s", method, http.errorToString(newCode).c_str());
+                        this->uart.println(headerResponse);
                     }
                 }
-                this->client.setCACert(this->root_ca);
+                this->client.setCACert(root_ca);
             }
         }
         http.end();
@@ -673,9 +669,12 @@ bool FlipperHTTP::upload_bytes(String url, String payload, const char *headerKey
 
         // send the request
         int httpCode = http.POST(payload);
+        int len = http.getSize(); // Get the response content length
+        char headerResponse[256];
         if (httpCode > 0)
         {
-            this->uart.println(F("[POST/SUCCESS]"));
+            snprintf(headerResponse, sizeof(headerResponse), "[POST/SUCCESS]{\"Status-Code\":%d,\"Content-Length\":%d}", httpCode, len);
+            this->uart.println(headerResponse);
 
             WiFiClient *stream = http.getStreamPtr();
 
@@ -703,8 +702,8 @@ bool FlipperHTTP::upload_bytes(String url, String payload, const char *headerKey
         {
             if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
             {
-                this->uart.print(F("[ERROR] POST Request Failed, error: "));
-                this->uart.println(F(http.errorToString(httpCode).c_str()));
+                snprintf(headerResponse, sizeof(headerResponse), "[ERROR] POST Request Failed, error: %s", http.errorToString(httpCode).c_str());
+                this->uart.println(headerResponse);
             }
             else // certification failed?
             {
@@ -718,9 +717,11 @@ bool FlipperHTTP::upload_bytes(String url, String payload, const char *headerKey
                         http.addHeader(headerKeys[i], headerValues[i]);
                     }
                     int newCode = http.POST(payload);
+                    int len = http.getSize(); // Get the response content length
                     if (newCode > 0)
                     {
-                        this->uart.println(F("[POST/SUCCESS]"));
+                        snprintf(headerResponse, sizeof(headerResponse), "[POST/SUCCESS]{\"Status-Code\":%d,\"Content-Length\":%d}", newCode, len);
+                        this->uart.println(headerResponse);
 
                         WiFiClient *stream = http.getStreamPtr();
 
@@ -736,13 +737,14 @@ bool FlipperHTTP::upload_bytes(String url, String payload, const char *headerKey
                         this->uart.flush();
                         this->uart.println();
                         this->uart.println(F("[POST/END]"));
-                        this->client.setCACert(this->root_ca);
+                        this->client.setCACert(root_ca);
                         return true;
                     }
                     else
                     {
-                        this->client.setCACert(this->root_ca);
-                        this->uart.println(F("[ERROR] POST Request Failed"));
+                        this->client.setCACert(root_ca);
+                        snprintf(headerResponse, sizeof(headerResponse), "[ERROR] POST Request Failed, error: %s", http.errorToString(newCode).c_str());
+                        this->uart.println(headerResponse);
                     }
                 }
             }
@@ -808,7 +810,7 @@ void FlipperHTTP::loop()
         // print the available commands
         if (_data.startsWith("[LIST]"))
         {
-            this->uart.println(F("[LIST],[PING], [REBOOT], [WIFI/IP], [WIFI/SCAN], [WIFI/SAVE], [WIFI/CONNECT], [WIFI/DISCONNECT], [WIFI/LIST], [GET], [GET/HTTP], [POST/HTTP], [PUT/HTTP], [DELETE/HTTP], [GET/BYTES], [POST/BYTES], [PARSE], [PARSE/ARRAY], [LED/ON], [LED/OFF], [IP/ADDRESS]"));
+            this->uart.println(F("[LIST], [PING], [REBOOT], [WIFI/IP], [WIFI/SCAN], [WIFI/SAVE], [WIFI/CONNECT], [WIFI/DISCONNECT], [WIFI/LIST], [GET], [GET/HTTP], [POST/HTTP], [PUT/HTTP], [DELETE/HTTP], [GET/BYTES], [POST/BYTES], [PARSE], [PARSE/ARRAY], [LED/ON], [LED/OFF], [IP/ADDRESS]"));
         }
         // handle [LED/ON] command
         else if (_data.startsWith("[LED/ON]"))
@@ -969,7 +971,6 @@ void FlipperHTTP::loop()
             String getData = this->request("GET", url);
             if (getData != "")
             {
-                this->uart.println(F("[GET/SUCCESS] GET request successful."));
                 this->uart.println(getData);
                 this->uart.flush();
                 this->uart.println();
@@ -1033,7 +1034,6 @@ void FlipperHTTP::loop()
             String getData = this->request("GET", url, "", headerKeys, headerValues, headerSize);
             if (getData != "")
             {
-                this->uart.println(F("[GET/SUCCESS] GET request successful."));
                 this->uart.println(getData);
                 this->uart.flush();
                 this->uart.println();
@@ -1098,7 +1098,6 @@ void FlipperHTTP::loop()
             String postData = this->request("POST", url, payload, headerKeys, headerValues, headerSize);
             if (postData != "")
             {
-                this->uart.println(F("[POST/SUCCESS] POST request successful."));
                 this->uart.println(postData);
                 this->uart.flush();
                 this->uart.println();
@@ -1128,7 +1127,7 @@ void FlipperHTTP::loop()
 
             if (error)
             {
-                this->uart.print("[ERROR] Failed to parse JSON.");
+                this->uart.print(F("[ERROR] Failed to parse JSON."));
                 this->led.off();
                 return;
             }
@@ -1163,7 +1162,6 @@ void FlipperHTTP::loop()
             String putData = this->request("PUT", url, payload, headerKeys, headerValues, headerSize);
             if (putData != "")
             {
-                this->uart.println(F("[PUT/SUCCESS] PUT request successful."));
                 this->uart.println(putData);
                 this->uart.flush();
                 this->uart.println();
@@ -1228,7 +1226,6 @@ void FlipperHTTP::loop()
             String deleteData = this->request("DELETE", url, payload, headerKeys, headerValues, headerSize);
             if (deleteData != "")
             {
-                this->uart.println(F("[DELETE/SUCCESS] DELETE request successful."));
                 this->uart.println(deleteData);
                 this->uart.flush();
                 this->uart.println();
