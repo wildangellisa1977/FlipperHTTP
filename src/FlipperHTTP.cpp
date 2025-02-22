@@ -3,7 +3,7 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over tthis->uart.
 Created: 2024-09-30
-Updated: 2025-02-16
+Updated: 2025-02-21
 */
 
 #include "FlipperHTTP.h"
@@ -30,7 +30,7 @@ bool FlipperHTTP::connectToWifi()
 {
     if (String(loadedSSID) == "" || String(loadedPassword) == "")
     {
-        this->uart.println("[ERROR] WiFi SSID or Password is empty.");
+        this->uart.println(F("[ERROR] WiFi SSID or Password is empty."));
         return false;
     }
 
@@ -51,79 +51,25 @@ bool FlipperHTTP::connectToWifi()
 
     if (this->isConnectedToWifi())
     {
-        this->uart.println("[SUCCESS] Successfully connected to Wifi.");
+        this->uart.println(F("[SUCCESS] Successfully connected to Wifi."));
         configTime(0, 0, "pool.ntp.org", "time.nist.gov"); // get UTC time via NTP
         return true;
     }
     else
     {
-        this->uart.println("[ERROR] Failed to connect to Wifi.");
+        this->uart.println(F("[ERROR] Failed to connect to Wifi."));
         return false;
     }
 }
 
-String FlipperHTTP::delete_request(String url, String payload)
+String FlipperHTTP::request(
+    const char *method,
+    String url,
+    String payload,
+    const char *headerKeys[],
+    const char *headerValues[],
+    int headerSize)
 {
-
-    HTTPClient http;
-    String response = "";
-
-    if (http.begin(this->client, url))
-    {
-        int httpCode = http.sendRequest("DELETE", payload);
-
-        if (httpCode > 0)
-        {
-            response = http.getString();
-            http.end();
-            return response;
-        }
-        else
-        {
-            if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
-            {
-                this->uart.print("[ERROR] DELETE Request Failed, error: ");
-                this->uart.println(http.errorToString(httpCode).c_str());
-            }
-            else // certification failed?
-            {
-                // send request without SSL
-                http.end();
-                this->client.setInsecure();
-                if (http.begin(this->client, url))
-                {
-                    int newCode = http.sendRequest("DELETE", payload);
-                    if (newCode > 0)
-                    {
-                        response = http.getString();
-                        http.end();
-                        this->client.setCACert(this->root_ca);
-                        return response;
-                    }
-                    else
-                    {
-                        this->client.setCACert(this->root_ca);
-                        this->uart.println("[ERROR] DELETE Request Failed");
-                    }
-                }
-            }
-        }
-        http.end();
-    }
-    else
-    {
-        this->uart.println("[ERROR] Unable to connect to the server.");
-    }
-
-    // Clear serial buffer to avoid any residual data
-    this->clearSerialBuffer();
-
-    return response;
-}
-
-String FlipperHTTP::delete_request(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize)
-{
-
     HTTPClient http;
     String response = "";
 
@@ -131,13 +77,17 @@ String FlipperHTTP::delete_request(String url, String payload, const char *heade
 
     if (http.begin(this->client, url))
     {
-
         for (int i = 0; i < headerSize; i++)
         {
             http.addHeader(headerKeys[i], headerValues[i]);
         }
 
-        int httpCode = http.sendRequest("DELETE", payload);
+        if (payload == "")
+        {
+            payload = "{}";
+        }
+
+        int httpCode = http.sendRequest(method, payload);
 
         if (httpCode > 0)
         {
@@ -149,8 +99,8 @@ String FlipperHTTP::delete_request(String url, String payload, const char *heade
         {
             if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
             {
-                this->uart.print("[ERROR] DELETE Request Failed, error: ");
-                this->uart.println(http.errorToString(httpCode).c_str());
+                this->uart.print(F("[ERROR] Request Failed, error: "));
+                this->uart.println(F(http.errorToString(httpCode).c_str()));
             }
             else // certification failed?
             {
@@ -163,7 +113,7 @@ String FlipperHTTP::delete_request(String url, String payload, const char *heade
                     {
                         http.addHeader(headerKeys[i], headerValues[i]);
                     }
-                    int newCode = http.sendRequest("DELETE", payload);
+                    int newCode = http.sendRequest(method, payload);
                     if (newCode > 0)
                     {
                         response = http.getString();
@@ -174,7 +124,7 @@ String FlipperHTTP::delete_request(String url, String payload, const char *heade
                     else
                     {
                         this->client.setCACert(this->root_ca);
-                        this->uart.println("[ERROR] DELETE Request Failed");
+                        this->uart.println(F("[ERROR] Request Failed"));
                     }
                 }
             }
@@ -183,143 +133,13 @@ String FlipperHTTP::delete_request(String url, String payload, const char *heade
     }
     else
     {
-        this->uart.println("[ERROR] Unable to connect to the server.");
+        this->uart.println(F("[ERROR] Unable to connect to the server."));
     }
 
     // Clear serial buffer to avoid any residual data
     this->clearSerialBuffer();
 
     return response;
-}
-
-String FlipperHTTP::get(String url)
-{
-
-    HTTPClient http;
-    String payload = "";
-
-    if (http.begin(this->client, url))
-    {
-        int httpCode = http.GET();
-
-        if (httpCode > 0)
-        {
-            payload = http.getString();
-            http.end();
-            return payload;
-        }
-        else
-        {
-            if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
-            {
-                this->uart.print("[ERROR] GET Request Failed, error: ");
-                this->uart.println(http.errorToString(httpCode).c_str());
-            }
-            else // certification failed?
-            {
-                // send request without SSL
-                http.end();
-                this->client.setInsecure();
-                if (http.begin(this->client, url))
-                {
-                    int newCode = http.GET();
-                    if (newCode > 0)
-                    {
-                        payload = http.getString();
-                        http.end();
-                        this->client.setCACert(this->root_ca);
-                        return payload;
-                    }
-                    else
-                    {
-                        this->client.setCACert(this->root_ca);
-                        this->uart.println("[ERROR] GET Request Failed");
-                    }
-                }
-            }
-        }
-        http.end();
-    }
-    else
-    {
-        this->uart.println("[ERROR] Unable to connect to the server.");
-    }
-
-    // Clear serial buffer to avoid any residual data
-    this->clearSerialBuffer();
-
-    return payload;
-}
-
-String FlipperHTTP::get(String url, const char *headerKeys[], const char *headerValues[], int headerSize)
-{
-
-    HTTPClient http;
-    String payload = "";
-
-    http.collectHeaders(headerKeys, headerSize);
-
-    if (http.begin(this->client, url))
-    {
-
-        for (int i = 0; i < headerSize; i++)
-        {
-            http.addHeader(headerKeys[i], headerValues[i]);
-        }
-
-        int httpCode = http.GET();
-
-        if (httpCode > 0)
-        {
-            payload = http.getString();
-            http.end();
-            return payload;
-        }
-        else
-        {
-            if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
-            {
-                this->uart.print("[ERROR] GET Request Failed, error: ");
-                this->uart.println(http.errorToString(httpCode).c_str());
-            }
-            else // certification failed?
-            {
-                // send request without SSL
-                http.end();
-                this->client.setInsecure();
-                if (http.begin(this->client, url))
-                {
-                    for (int i = 0; i < headerSize; i++)
-                    {
-                        http.addHeader(headerKeys[i], headerValues[i]);
-                    }
-                    int newCode = http.GET();
-                    if (newCode > 0)
-                    {
-                        payload = http.getString();
-                        http.end();
-                        this->client.setCACert(this->root_ca);
-                        return payload;
-                    }
-                    else
-                    {
-                        this->client.setCACert(this->root_ca);
-                        this->uart.println("[ERROR] GET Request Failed");
-                    }
-                }
-            }
-        }
-        http.end();
-    }
-    else
-    {
-        this->uart.println("[ERROR] Unable to connect to the server.");
-    }
-
-    // Clear serial buffer to avoid any residual data
-    this->clearSerialBuffer();
-
-    return payload;
 }
 
 // Load WiFi settings from SPIFFS and attempt to connect
@@ -379,268 +199,6 @@ bool FlipperHTTP::loadWifiSettings()
     return false;
 }
 
-String FlipperHTTP::post(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize)
-{
-
-    HTTPClient http;
-    String response = "";
-
-    http.collectHeaders(headerKeys, headerSize);
-
-    if (http.begin(this->client, url))
-    {
-
-        for (int i = 0; i < headerSize; i++)
-        {
-            http.addHeader(headerKeys[i], headerValues[i]);
-        }
-
-        int httpCode = http.POST(payload);
-
-        if (httpCode > 0)
-        {
-            response = http.getString();
-            http.end();
-            return response;
-        }
-        else
-        {
-            if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
-            {
-                this->uart.print("[ERROR] POST Request Failed, error: ");
-                this->uart.println(http.errorToString(httpCode).c_str());
-            }
-            else // certification failed?
-            {
-                // send request without SSL
-                http.end();
-                this->client.setInsecure();
-                if (http.begin(this->client, url))
-                {
-                    for (int i = 0; i < headerSize; i++)
-                    {
-                        http.addHeader(headerKeys[i], headerValues[i]);
-                    }
-                    int newCode = http.POST(payload);
-                    if (newCode > 0)
-                    {
-                        response = http.getString();
-                        http.end();
-                        this->client.setCACert(this->root_ca);
-                        return response;
-                    }
-                    else
-                    {
-                        this->client.setCACert(this->root_ca);
-                        this->uart.println("[ERROR] POST Request Failed");
-                    }
-                }
-            }
-        }
-        http.end();
-    }
-    else
-    {
-        this->uart.println("[ERROR] Unable to connect to the server.");
-    }
-
-    // Clear serial buffer to avoid any residual data
-    this->clearSerialBuffer();
-
-    return response;
-}
-
-String FlipperHTTP::post(String url, String payload)
-{
-
-    HTTPClient http;
-    String response = "";
-
-    if (http.begin(this->client, url))
-    {
-
-        int httpCode = http.POST(payload);
-
-        if (httpCode > 0)
-        {
-            response = http.getString();
-            http.end();
-            return response;
-        }
-        else
-        {
-            if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
-            {
-                this->uart.print("[ERROR] POST Request Failed, error: ");
-                this->uart.println(http.errorToString(httpCode).c_str());
-            }
-            else // certification failed?
-            {
-                // send request without SSL
-                http.end();
-                this->client.setInsecure();
-                if (http.begin(this->client, url))
-                {
-                    int newCode = http.POST(payload);
-                    if (newCode > 0)
-                    {
-                        response = http.getString();
-                        http.end();
-                        this->client.setCACert(this->root_ca);
-                        return response;
-                    }
-                    else
-                    {
-                        this->client.setCACert(this->root_ca);
-                        this->uart.println("[ERROR] POST Request Failed");
-                    }
-                }
-            }
-        }
-        http.end();
-    }
-
-    else
-    {
-        this->uart.println("[ERROR] Unable to connect to the server.");
-    }
-
-    // Clear serial buffer to avoid any residual data
-    this->clearSerialBuffer();
-
-    return response;
-}
-
-String FlipperHTTP::put(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize)
-{
-
-    HTTPClient http;
-    String response = "";
-
-    http.collectHeaders(headerKeys, headerSize);
-
-    if (http.begin(this->client, url))
-    {
-
-        for (int i = 0; i < headerSize; i++)
-        {
-            http.addHeader(headerKeys[i], headerValues[i]);
-        }
-
-        int httpCode = http.PUT(payload);
-
-        if (httpCode > 0)
-        {
-            response = http.getString();
-            http.end();
-            return response;
-        }
-        else
-        {
-            if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
-            {
-                this->uart.print("[ERROR] PUT Request Failed, error: ");
-                this->uart.println(http.errorToString(httpCode).c_str());
-            }
-            else // certification failed?
-            {
-                // send request without SSL
-                http.end();
-                this->client.setInsecure();
-                if (http.begin(this->client, url))
-                {
-                    for (int i = 0; i < headerSize; i++)
-                    {
-                        http.addHeader(headerKeys[i], headerValues[i]);
-                    }
-                    int newCode = http.PUT(payload);
-                    if (newCode > 0)
-                    {
-                        response = http.getString();
-                        http.end();
-                        this->client.setCACert(this->root_ca);
-                        return response;
-                    }
-                    else
-                    {
-                        this->client.setCACert(this->root_ca);
-                        this->uart.println("[ERROR] PUT Request Failed");
-                    }
-                }
-            }
-        }
-        http.end();
-    }
-    else
-    {
-        this->uart.println("[ERROR] Unable to connect to the server.");
-    }
-
-    // Clear serial buffer to avoid any residual data
-    this->clearSerialBuffer();
-
-    return response;
-}
-
-String FlipperHTTP::put(String url, String payload)
-{
-
-    HTTPClient http;
-    String response = "";
-
-    if (http.begin(this->client, url))
-    {
-        int httpCode = http.PUT(payload);
-
-        if (httpCode > 0)
-        {
-            response = http.getString();
-            http.end();
-            return response;
-        }
-        else
-        {
-            if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
-            {
-                this->uart.print("[ERROR] PUT Request Failed, error: ");
-                this->uart.println(http.errorToString(httpCode).c_str());
-            }
-            else // certification failed?
-            {
-                // send request without SSL
-                http.end();
-                this->client.setInsecure();
-                if (http.begin(this->client, url))
-                {
-                    int newCode = http.PUT(payload);
-                    if (newCode > 0)
-                    {
-                        response = http.getString();
-                        http.end();
-                        this->client.setCACert(this->root_ca);
-                        return response;
-                    }
-                    else
-                    {
-                        this->client.setCACert(this->root_ca);
-                        this->uart.println("[ERROR] PUT Request Failed");
-                    }
-                }
-            }
-        }
-        http.end();
-    }
-    else
-    {
-        this->uart.println("[ERROR] Unable to connect to the server.");
-    }
-
-    // Clear serial buffer to avoid any residual data
-    this->clearSerialBuffer();
-
-    return response;
-}
-
 // Save WiFi settings to storage
 bool FlipperHTTP::saveWifiSettings(String jsonData)
 {
@@ -649,7 +207,7 @@ bool FlipperHTTP::saveWifiSettings(String jsonData)
 
     if (error)
     {
-        this->uart.println("[ERROR] Failed to parse JSON data.");
+        this->uart.println(F("[ERROR] Failed to parse JSON data."));
         return false;
     }
 
@@ -704,7 +262,7 @@ bool FlipperHTTP::saveWifiSettings(String jsonData)
 #endif
         if (!file)
         {
-            this->uart.println("[ERROR] Failed to open file for writing.");
+            this->uart.println(F("[ERROR] Failed to open file for writing."));
             return false;
         }
 
@@ -712,7 +270,7 @@ bool FlipperHTTP::saveWifiSettings(String jsonData)
         file.close();
     }
 
-    this->uart.print("[SUCCESS] Settings saved.");
+    this->uart.print(F("[SUCCESS] Settings saved."));
     return true;
 }
 
@@ -747,13 +305,13 @@ void FlipperHTTP::setup()
         {
             if (!LittleFS.begin())
             {
-                this->uart.println("Failed to re-mount LittleFS after formatting.");
+                this->uart.println(F("Failed to re-mount LittleFS after formatting."));
                 rp2040.reboot();
             }
         }
         else
         {
-            this->uart.println("File system formatting failed.");
+            this->uart.println(F("File system formatting failed."));
             rp2040.reboot();
         }
     }
@@ -764,13 +322,13 @@ void FlipperHTTP::setup()
         {
             if (!LittleFS.begin())
             {
-                this->uart.println("Failed to re-mount LittleFS after formatting.");
+                this->uart.println(F("Failed to re-mount LittleFS after formatting."));
                 rp2040.reboot();
             }
         }
         else
         {
-            this->uart.println("File system formatting failed.");
+            this->uart.println(F("File system formatting failed."));
             rp2040.reboot();
         }
     }
@@ -784,13 +342,13 @@ void FlipperHTTP::setup()
         {
             if (!LittleFS.begin())
             {
-                this->uart.println("Failed to re-mount LittleFS after formatting.");
+                this->uart.println(F("Failed to re-mount LittleFS after formatting."));
                 rp2040.reboot();
             }
         }
         else
         {
-            this->uart.println("File system formatting failed.");
+            this->uart.println(F("File system formatting failed."));
             rp2040.reboot();
         }
     }
@@ -799,7 +357,7 @@ void FlipperHTTP::setup()
     // Initialize SPIFFS
     if (!SPIFFS.begin(true))
     {
-        this->uart.println("[ERROR] SPIFFS initialization failed.");
+        this->uart.println(F("[ERROR] SPIFFS initialization failed."));
         ESP.restart();
     }
 #endif
@@ -810,7 +368,7 @@ void FlipperHTTP::setup()
     this->uart.flush();
 }
 
-bool FlipperHTTP::stream_bytes_get(String url, const char *headerKeys[], const char *headerValues[], int headerSize)
+bool FlipperHTTP::stream_bytes(const char *method, String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize)
 {
     HTTPClient http;
 
@@ -823,227 +381,22 @@ bool FlipperHTTP::stream_bytes_get(String url, const char *headerKeys[], const c
             http.addHeader(headerKeys[i], headerValues[i]);
         }
 
-        int httpCode = http.GET();
+        if (payload == "")
+        {
+            payload = "{}";
+        }
+
+        int httpCode = http.sendRequest(method, payload);
         if (httpCode > 0)
         {
-            this->uart.println("[GET/SUCCESS]");
-
-            int len = http.getSize();
-            uint8_t buff[512] = {0};
-
-            WiFiClient *stream = http.getStreamPtr();
-
-// Check available heap memory before starting
-#ifdef BOARD_PICO_W
-            size_t freeHeap = rp2040.getFreeHeap();
-#elif BOARD_PICO_2W
-            size_t freeHeap = rp2040.getFreeHeap();
-#elif BOARD_VGM
-            size_t freeHeap = rp2040.getFreeHeap();
-#else
-            size_t freeHeap = ESP.getFreeHeap();
-#endif
-            const size_t minHeapThreshold = 1024; // Minimum heap space to avoid overflow
-            if (freeHeap < minHeapThreshold)
+            if (strcmp(method, "GET") == 0)
             {
-                this->uart.println("[ERROR] Not enough memory to start processing the response.");
-                http.end();
-                return false;
+                this->uart.println(F("[GET/SUCCESS]"));
             }
-
-            // Start timeout timer
-            unsigned long timeoutStart = millis();
-            const unsigned long timeoutInterval = 2000; // 2 seconds timeout
-
-            // Stream data while connected and available
-            while (http.connected() && (len > 0 || len == -1))
+            else
             {
-                size_t size = stream->available();
-                if (size)
-                {
-                    // Reset the timeout when data is received
-                    timeoutStart = millis();
-
-                    int c = stream->readBytes(buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
-                    this->uart.write(buff, c); // Write data to serial
-                    if (len > 0)
-                    {
-                        len -= c;
-                    }
-                }
-                else
-                {
-                    // Check if timeout elapsed
-                    if (millis() - timeoutStart > timeoutInterval)
-                    {
-                        break;
-                    }
-                }
-                delay(1); // Yield control to the system
+                this->uart.println(F("[POST/SUCCESS]"));
             }
-
-#ifdef BOARD_PICO_W
-            freeHeap = rp2040.getFreeHeap();
-#elif BOARD_PICO_2W
-            freeHeap = rp2040.getFreeHeap();
-#elif BOARD_VGM
-            freeHeap = rp2040.getFreeHeap();
-#else
-            freeHeap = ESP.getFreeHeap();
-#endif
-            if (freeHeap < minHeapThreshold)
-            {
-                this->uart.println("[ERROR] Not enough memory to continue processing the response.");
-                http.end();
-                return false;
-            }
-
-            // Flush the serial buffer to ensure all data is sent
-            http.end();
-            this->uart.flush();
-            this->uart.println();
-            this->uart.println("[GET/END]");
-
-            return true;
-        }
-        else
-        {
-            if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
-            {
-                this->uart.print("[ERROR] GET Request Failed, error: ");
-                this->uart.println(http.errorToString(httpCode).c_str());
-            }
-            else // Possibly certificate failed
-            {
-                // send request without SSL
-                http.end();
-                this->client.setInsecure();
-                if (http.begin(this->client, url))
-                {
-                    for (int i = 0; i < headerSize; i++)
-                    {
-                        http.addHeader(headerKeys[i], headerValues[i]);
-                    }
-                    int newCode = http.GET();
-                    if (newCode > 0)
-                    {
-                        this->uart.println("[GET/SUCCESS]");
-                        int len = http.getSize();
-                        uint8_t buff[512] = {0};
-
-                        WiFiClient *stream = http.getStreamPtr();
-
-// Check available heap memory before starting
-#ifdef BOARD_PICO_W
-                        size_t freeHeap = rp2040.getFreeHeap();
-#elif BOARD_PICO_2W
-                        size_t freeHeap = rp2040.getFreeHeap();
-#elif BOARD_VGM
-                        size_t freeHeap = rp2040.getFreeHeap();
-#else
-                        size_t freeHeap = ESP.getFreeHeap();
-#endif
-                        const size_t minHeapThreshold = 1024; // Minimum heap space to avoid overflow
-                        if (freeHeap < minHeapThreshold)
-                        {
-                            this->uart.println("[ERROR] Not enough memory to start processing the response.");
-                            http.end();
-                            this->client.setCACert(this->root_ca);
-                            return false;
-                        }
-
-                        // Start timeout timer
-                        unsigned long timeoutStart = millis();
-                        const unsigned long timeoutInterval = 2000; // 2 seconds timeout
-
-                        // Stream data while connected and available
-                        while (http.connected() && (len > 0 || len == -1))
-                        {
-                            size_t size = stream->available();
-                            if (size)
-                            {
-                                // Reset the timeout when new data comes in
-                                timeoutStart = millis();
-
-                                int c = stream->readBytes(buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
-                                this->uart.write(buff, c); // Write data to serial
-                                if (len > 0)
-                                {
-                                    len -= c;
-                                }
-                            }
-                            else
-                            {
-                                // Check if timeout has been reached
-                                if (millis() - timeoutStart > timeoutInterval)
-                                {
-                                    break;
-                                }
-                            }
-                            delay(1); // Yield control to the system
-                        }
-
-#ifdef BOARD_PICO_W
-                        freeHeap = rp2040.getFreeHeap();
-#elif BOARD_PICO_2W
-                        freeHeap = rp2040.getFreeHeap();
-#elif BOARD_VGM
-                        freeHeap = rp2040.getFreeHeap();
-#else
-                        freeHeap = ESP.getFreeHeap();
-#endif
-                        if (freeHeap < minHeapThreshold)
-                        {
-                            this->uart.println("[ERROR] Not enough memory to continue processing the response.");
-                            http.end();
-                            this->client.setCACert(this->root_ca);
-                            return false;
-                        }
-
-                        // Flush the serial buffer to ensure all data is sent
-                        http.end();
-                        this->uart.flush();
-                        this->uart.println();
-                        this->uart.println("[GET/END]");
-                        this->client.setCACert(this->root_ca);
-                        return true;
-                    }
-                    else
-                    {
-                        this->client.setCACert(this->root_ca);
-                        this->uart.printf("[ERROR] GET request failed with error: %s\n", http.errorToString(httpCode).c_str());
-                    }
-                }
-                this->client.setCACert(this->root_ca);
-            }
-        }
-        http.end();
-    }
-    else
-    {
-        this->uart.println("[ERROR] Unable to connect to the server.");
-    }
-    return false;
-}
-
-bool FlipperHTTP::stream_bytes_post(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize)
-{
-    HTTPClient http;
-
-    http.collectHeaders(headerKeys, headerSize);
-
-    if (http.begin(this->client, url))
-    {
-        for (int i = 0; i < headerSize; i++)
-        {
-            http.addHeader(headerKeys[i], headerValues[i]);
-        }
-
-        int httpCode = http.POST(payload);
-        if (httpCode > 0)
-        {
-            this->uart.println("[POST/SUCCESS]");
-
             int len = http.getSize(); // Get the response content length
             uint8_t buff[512] = {0};  // Buffer for reading data
 
@@ -1062,7 +415,7 @@ bool FlipperHTTP::stream_bytes_post(String url, String payload, const char *head
             const size_t minHeapThreshold = 1024; // Minimum heap space to avoid overflow
             if (freeHeap < minHeapThreshold)
             {
-                this->uart.println("[ERROR] Not enough memory to start processing the response.");
+                this->uart.println(F("[ERROR] Not enough memory to start processing the response."));
                 http.end();
                 return false;
             }
@@ -1109,7 +462,7 @@ bool FlipperHTTP::stream_bytes_post(String url, String payload, const char *head
 #endif
             if (freeHeap < minHeapThreshold)
             {
-                this->uart.println("[ERROR] Not enough memory to continue processing the response.");
+                this->uart.println(F("[ERROR] Not enough memory to continue processing the response."));
                 http.end();
                 return false;
             }
@@ -1118,16 +471,22 @@ bool FlipperHTTP::stream_bytes_post(String url, String payload, const char *head
             // Flush the serial buffer to ensure all data is sent
             this->uart.flush();
             this->uart.println();
-            this->uart.println("[POST/END]");
-
+            if (strcmp(method, "GET") == 0)
+            {
+                this->uart.println("[GET/END]");
+            }
+            else
+            {
+                this->uart.println("[POST/END]");
+            }
             return true;
         }
         else
         {
             if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
             {
-                this->uart.print("[ERROR] POST Request Failed, error: ");
-                this->uart.println(http.errorToString(httpCode).c_str());
+                this->uart.print(F("[ERROR] Request Failed, error: "));
+                this->uart.println(F(http.errorToString(httpCode).c_str()));
             }
             else // certification failed?
             {
@@ -1140,10 +499,17 @@ bool FlipperHTTP::stream_bytes_post(String url, String payload, const char *head
                     {
                         http.addHeader(headerKeys[i], headerValues[i]);
                     }
-                    int newCode = http.POST(payload);
+                    int newCode = http.sendRequest(method, payload);
                     if (newCode > 0)
                     {
-                        this->uart.println("[POST/SUCCESS]");
+                        if (strcmp(method, "GET") == 0)
+                        {
+                            this->uart.println(F("[GET/SUCCESS]"));
+                        }
+                        else
+                        {
+                            this->uart.println(F("[POST/SUCCESS]"));
+                        }
                         int len = http.getSize(); // Get the response content length
                         uint8_t buff[512] = {0};  // Buffer for reading data
 
@@ -1159,10 +525,9 @@ bool FlipperHTTP::stream_bytes_post(String url, String payload, const char *head
 #else
                         size_t freeHeap = ESP.getFreeHeap();
 #endif
-                        const size_t minHeapThreshold = 1024; // Minimum heap space to avoid overflow
-                        if (freeHeap < minHeapThreshold)
+                        if (freeHeap < 1024)
                         {
-                            this->uart.println("[ERROR] Not enough memory to start processing the response.");
+                            this->uart.println(F("[ERROR] Not enough memory to start processing the response."));
                             http.end();
                             this->client.setCACert(this->root_ca);
                             return false;
@@ -1208,9 +573,9 @@ bool FlipperHTTP::stream_bytes_post(String url, String payload, const char *head
 #else
                         freeHeap = ESP.getFreeHeap();
 #endif
-                        if (freeHeap < minHeapThreshold)
+                        if (freeHeap < 1024)
                         {
-                            this->uart.println("[ERROR] Not enough memory to continue processing the response.");
+                            this->uart.println(F("[ERROR] Not enough memory to continue processing the response."));
                             http.end();
                             this->client.setCACert(this->root_ca);
                             return false;
@@ -1220,14 +585,21 @@ bool FlipperHTTP::stream_bytes_post(String url, String payload, const char *head
                         // Flush the serial buffer to ensure all data is sent
                         this->uart.flush();
                         this->uart.println();
-                        this->uart.println("[POST/END]");
+                        if (strcmp(method, "GET") == 0)
+                        {
+                            this->uart.println("[GET/END]");
+                        }
+                        else
+                        {
+                            this->uart.println("[POST/END]");
+                        }
                         this->client.setCACert(this->root_ca);
                         return true;
                     }
                     else
                     {
                         this->client.setCACert(this->root_ca);
-                        this->uart.printf("[ERROR] POST request failed with error: %s\n", http.errorToString(httpCode).c_str());
+                        this->uart.printf("[ERROR] Request failed with error: %s\n", http.errorToString(httpCode).c_str());
                     }
                 }
                 this->client.setCACert(this->root_ca);
@@ -1237,7 +609,7 @@ bool FlipperHTTP::stream_bytes_post(String url, String payload, const char *head
     }
     else
     {
-        this->uart.println("[ERROR] Unable to connect to the server.");
+        this->uart.println(F("[ERROR] Unable to connect to the server."));
     }
     return false;
 }
@@ -1249,8 +621,8 @@ bool FlipperHTTP::read_serial_settings(String receivedData, bool connectAfterSav
 
     if (error)
     {
-        this->uart.print("[ERROR] Failed to parse JSON: ");
-        this->uart.println(error.c_str());
+        this->uart.print(F("[ERROR] Failed to parse JSON: "));
+        this->uart.println(F(error.c_str()));
         return false;
     }
 
@@ -1262,21 +634,21 @@ bool FlipperHTTP::read_serial_settings(String receivedData, bool connectAfterSav
     }
     else
     {
-        this->uart.println("[ERROR] JSON does not contain ssid and password.");
+        this->uart.println(F("[ERROR] JSON does not contain ssid and password."));
         return false;
     }
 
     // Save to storage
     if (!this->saveWifiSettings(receivedData))
     {
-        this->uart.println("[ERROR] Failed to save settings to file.");
+        this->uart.println(F("[ERROR] Failed to save settings to file."));
         return false;
     }
 
     // Attempt to reconnect with new settings
     if (connectAfterSave && this->connectToWifi())
     {
-        this->uart.println("[SUCCESS] Connected to the new Wifi network.");
+        this->uart.println(F("[SUCCESS] Connected to the new Wifi network."));
     }
 
     return true;
@@ -1303,7 +675,7 @@ bool FlipperHTTP::upload_bytes(String url, String payload, const char *headerKey
         int httpCode = http.POST(payload);
         if (httpCode > 0)
         {
-            this->uart.println("[POST/SUCCESS]");
+            this->uart.println(F("[POST/SUCCESS]"));
 
             WiFiClient *stream = http.getStreamPtr();
 
@@ -1324,15 +696,15 @@ bool FlipperHTTP::upload_bytes(String url, String payload, const char *headerKey
             // Flush the serial buffer to ensure all data is sent
             this->uart.flush();
             this->uart.println();
-            this->uart.println("[POST/END]");
+            this->uart.println(F("[POST/END]"));
             return true;
         }
         else
         {
             if (httpCode != -1) // HTTPC_ERROR_CONNECTION_FAILED
             {
-                this->uart.print("[ERROR] POST Request Failed, error: ");
-                this->uart.println(http.errorToString(httpCode).c_str());
+                this->uart.print(F("[ERROR] POST Request Failed, error: "));
+                this->uart.println(F(http.errorToString(httpCode).c_str()));
             }
             else // certification failed?
             {
@@ -1348,7 +720,7 @@ bool FlipperHTTP::upload_bytes(String url, String payload, const char *headerKey
                     int newCode = http.POST(payload);
                     if (newCode > 0)
                     {
-                        this->uart.println("[POST/SUCCESS]");
+                        this->uart.println(F("[POST/SUCCESS]"));
 
                         WiFiClient *stream = http.getStreamPtr();
 
@@ -1363,14 +735,14 @@ bool FlipperHTTP::upload_bytes(String url, String payload, const char *headerKey
                         // Flush the serial buffer to ensure all data is sent
                         this->uart.flush();
                         this->uart.println();
-                        this->uart.println("[POST/END]");
+                        this->uart.println(F("[POST/END]"));
                         this->client.setCACert(this->root_ca);
                         return true;
                     }
                     else
                     {
                         this->client.setCACert(this->root_ca);
-                        this->uart.println("[ERROR] POST Request Failed");
+                        this->uart.println(F("[ERROR] POST Request Failed"));
                     }
                 }
             }
@@ -1379,7 +751,7 @@ bool FlipperHTTP::upload_bytes(String url, String payload, const char *headerKey
     }
     else
     {
-        this->uart.println("[ERROR] Unable to connect to the server.");
+        this->uart.println(F("[ERROR] Unable to connect to the server."));
     }
     return false;
 }
@@ -1436,7 +808,7 @@ void FlipperHTTP::loop()
         // print the available commands
         if (_data.startsWith("[LIST]"))
         {
-            this->uart.println("[LIST],[PING], [REBOOT], [WIFI/IP], [WIFI/SCAN], [WIFI/SAVE], [WIFI/CONNECT], [WIFI/DISCONNECT], [WIFI/LIST], [GET], [GET/HTTP], [POST/HTTP], [PUT/HTTP], [DELETE/HTTP], [GET/BYTES], [POST/BYTES], [PARSE], [PARSE/ARRAY], [LED/ON], [LED/OFF], [IP/ADDRESS]");
+            this->uart.println(F("[LIST],[PING], [REBOOT], [WIFI/IP], [WIFI/SCAN], [WIFI/SAVE], [WIFI/CONNECT], [WIFI/DISCONNECT], [WIFI/LIST], [GET], [GET/HTTP], [POST/HTTP], [PUT/HTTP], [DELETE/HTTP], [GET/BYTES], [POST/BYTES], [PARSE], [PARSE/ARRAY], [LED/ON], [LED/OFF], [IP/ADDRESS]"));
         }
         // handle [LED/ON] command
         else if (_data.startsWith("[LED/ON]"))
@@ -1458,28 +830,28 @@ void FlipperHTTP::loop()
         {
             if (!this->isConnectedToWifi() && !this->connectToWifi())
             {
-                this->uart.println("[ERROR] Not connected to Wifi. Failed to reconnect.");
+                this->uart.println(F("[ERROR] Not connected to Wifi. Failed to reconnect."));
                 this->led.off();
                 return;
             }
             // Get Request
-            String jsonData = this->get("https://httpbin.org/get");
+            String jsonData = this->request("GET", "https://httpbin.org/get");
             if (jsonData == "")
             {
-                this->uart.println("[ERROR] GET request failed or returned empty data.");
+                this->uart.println(F("[ERROR] GET request failed or returned empty data."));
                 return;
             }
             JsonDocument doc;
             DeserializationError error = deserializeJson(doc, jsonData);
             if (error)
             {
-                this->uart.print("[ERROR] Failed to parse JSON.");
+                this->uart.print(F("[ERROR] Failed to parse JSON."));
                 this->led.off();
                 return;
             }
             if (!doc.containsKey("origin"))
             {
-                this->uart.println("[ERROR] JSON does not contain origin.");
+                this->uart.println(F("[ERROR] JSON does not contain origin."));
                 this->led.off();
                 return;
             }
@@ -1524,7 +896,7 @@ void FlipperHTTP::loop()
 #endif
             if (!file)
             {
-                this->uart.println("[ERROR] Failed to open file for reading.");
+                this->uart.println(F("[ERROR] Failed to open file for reading."));
                 return;
             }
 
@@ -1545,11 +917,11 @@ void FlipperHTTP::loop()
             // Parse and save the settings
             if (this->read_serial_settings(jsonData, true))
             {
-                this->uart.println("[SUCCESS] Wifi settings saved.");
+                this->uart.println(F("[SUCCESS] Wifi settings saved."));
             }
             else
             {
-                this->uart.println("[ERROR] Failed to save Wifi settings.");
+                this->uart.println(F("[ERROR] Failed to save Wifi settings."));
             }
         }
         // Handle [WIFI/CONNECT] command
@@ -1561,23 +933,23 @@ void FlipperHTTP::loop()
                 // Attempt to connect to Wifi
                 if (this->connectToWifi())
                 {
-                    this->uart.println("[SUCCESS] Connected to Wifi.");
+                    this->uart.println(F("[SUCCESS] Connected to Wifi."));
                 }
                 else
                 {
-                    this->uart.println("[ERROR] Failed to connect to Wifi.");
+                    this->uart.println(F("[ERROR] Failed to connect to Wifi."));
                 }
             }
             else
             {
-                this->uart.println("[INFO] Already connected to Wifi.");
+                this->uart.println(F("[INFO] Already connected to WiFi."));
             }
         }
         // Handle [WIFI/DISCONNECT] command
         else if (_data == "[WIFI/DISCONNECT]")
         {
             WiFi.disconnect(true);
-            this->uart.println("[DISCONNECTED] Wifi has been disconnected.");
+            this->uart.println(F("[DISCONNECTED] WiFi has been disconnected."));
         }
         // Handle [GET] command
         else if (_data.startsWith("[GET]"))
@@ -1585,7 +957,7 @@ void FlipperHTTP::loop()
 
             if (!this->isConnectedToWifi() && !this->connectToWifi())
             {
-                this->uart.println("[ERROR] Not connected to Wifi. Failed to reconnect.");
+                this->uart.println(F("[ERROR] Not connected to WiFi. Failed to reconnect."));
                 this->led.off();
                 return;
             }
@@ -1594,18 +966,18 @@ void FlipperHTTP::loop()
             url.trim();
 
             // GET request
-            String getData = this->get(url);
+            String getData = this->request("GET", url);
             if (getData != "")
             {
-                this->uart.println("[GET/SUCCESS] GET request successful.");
+                this->uart.println(F("[GET/SUCCESS] GET request successful."));
                 this->uart.println(getData);
                 this->uart.flush();
                 this->uart.println();
-                this->uart.println("[GET/END]");
+                this->uart.println(F("[GET/END]"));
             }
             else
             {
-                this->uart.println("[ERROR] GET request failed or returned empty data.");
+                this->uart.println(F("[ERROR] GET request failed or returned empty data."));
             }
         }
         // Handle [GET/HTTP] command
@@ -1613,7 +985,7 @@ void FlipperHTTP::loop()
         {
             if (!this->isConnectedToWifi() && !this->connectToWifi())
             {
-                this->uart.println("[ERROR] Not connected to Wifi. Failed to reconnect.");
+                this->uart.println(F("[ERROR] Not connected to Wifi. Failed to reconnect."));
                 this->led.off();
                 return;
             }
@@ -1627,7 +999,7 @@ void FlipperHTTP::loop()
 
             if (error)
             {
-                this->uart.print("[ERROR] Failed to parse JSON.");
+                this->uart.print(F("[ERROR] Failed to parse JSON."));
                 this->led.off();
                 return;
             }
@@ -1635,7 +1007,7 @@ void FlipperHTTP::loop()
             // Extract values from JSON
             if (!doc.containsKey("url"))
             {
-                this->uart.println("[ERROR] JSON does not contain url.");
+                this->uart.println(F("[ERROR] JSON does not contain url."));
                 this->led.off();
                 return;
             }
@@ -1658,18 +1030,18 @@ void FlipperHTTP::loop()
             }
 
             // GET request
-            String getData = this->get(url, headerKeys, headerValues, headerSize);
+            String getData = this->request("GET", url, "", headerKeys, headerValues, headerSize);
             if (getData != "")
             {
-                this->uart.println("[GET/SUCCESS] GET request successful.");
+                this->uart.println(F("[GET/SUCCESS] GET request successful."));
                 this->uart.println(getData);
                 this->uart.flush();
                 this->uart.println();
-                this->uart.println("[GET/END]");
+                this->uart.println(F("[GET/END]"));
             }
             else
             {
-                this->uart.println("[ERROR] GET request failed or returned empty data.");
+                this->uart.println(F("[ERROR] GET request failed or returned empty data."));
             }
         }
         // Handle [POST/HTTP] command
@@ -1677,7 +1049,7 @@ void FlipperHTTP::loop()
         {
             if (!this->isConnectedToWifi() && !this->connectToWifi())
             {
-                this->uart.println("[ERROR] Not connected to Wifi. Failed to reconnect.");
+                this->uart.println(F("[ERROR] Not connected to Wifi. Failed to reconnect."));
                 this->led.off();
                 return;
             }
@@ -1691,7 +1063,7 @@ void FlipperHTTP::loop()
 
             if (error)
             {
-                this->uart.print("[ERROR] Failed to parse JSON.");
+                this->uart.print(F("[ERROR] Failed to parse JSON."));
                 this->led.off();
                 return;
             }
@@ -1699,7 +1071,7 @@ void FlipperHTTP::loop()
             // Extract values from JSON
             if (!doc.containsKey("url") || !doc.containsKey("payload"))
             {
-                this->uart.println("[ERROR] JSON does not contain url or payload.");
+                this->uart.println(F("[ERROR] JSON does not contain url or payload."));
                 this->led.off();
                 return;
             }
@@ -1723,18 +1095,18 @@ void FlipperHTTP::loop()
             }
 
             // POST request
-            String postData = this->post(url, payload, headerKeys, headerValues, headerSize);
+            String postData = this->request("POST", url, payload, headerKeys, headerValues, headerSize);
             if (postData != "")
             {
-                this->uart.println("[POST/SUCCESS] POST request successful.");
+                this->uart.println(F("[POST/SUCCESS] POST request successful."));
                 this->uart.println(postData);
                 this->uart.flush();
                 this->uart.println();
-                this->uart.println("[POST/END]");
+                this->uart.println(F("[POST/END]"));
             }
             else
             {
-                this->uart.println("[ERROR] POST request failed or returned empty data.");
+                this->uart.println(F("[ERROR] POST request failed or returned empty data."));
             }
         }
         // Handle [PUT/HTTP] command
@@ -1742,7 +1114,7 @@ void FlipperHTTP::loop()
         {
             if (!this->isConnectedToWifi() && !this->connectToWifi())
             {
-                this->uart.println("[ERROR] Not connected to Wifi. Failed to reconnect.");
+                this->uart.println(F("[ERROR] Not connected to Wifi. Failed to reconnect."));
                 this->led.off();
                 return;
             }
@@ -1764,7 +1136,7 @@ void FlipperHTTP::loop()
             // Extract values from JSON
             if (!doc.containsKey("url") || !doc.containsKey("payload"))
             {
-                this->uart.println("[ERROR] JSON does not contain url or payload.");
+                this->uart.println(F("[ERROR] JSON does not contain url or payload."));
                 this->led.off();
                 return;
             }
@@ -1788,18 +1160,18 @@ void FlipperHTTP::loop()
             }
 
             // PUT request
-            String putData = this->put(url, payload, headerKeys, headerValues, headerSize);
+            String putData = this->request("PUT", url, payload, headerKeys, headerValues, headerSize);
             if (putData != "")
             {
-                this->uart.println("[PUT/SUCCESS] PUT request successful.");
+                this->uart.println(F("[PUT/SUCCESS] PUT request successful."));
                 this->uart.println(putData);
                 this->uart.flush();
                 this->uart.println();
-                this->uart.println("[PUT/END]");
+                this->uart.println(F("[PUT/END]"));
             }
             else
             {
-                this->uart.println("[ERROR] PUT request failed or returned empty data.");
+                this->uart.println(F("[ERROR] PUT request failed or returned empty data."));
             }
         }
         // Handle [DELETE/HTTP] command
@@ -1807,7 +1179,7 @@ void FlipperHTTP::loop()
         {
             if (!this->isConnectedToWifi() && !this->connectToWifi())
             {
-                this->uart.println("[ERROR] Not connected to Wifi. Failed to reconnect.");
+                this->uart.println(F("[ERROR] Not connected to Wifi. Failed to reconnect."));
                 this->led.off();
                 return;
             }
@@ -1821,7 +1193,7 @@ void FlipperHTTP::loop()
 
             if (error)
             {
-                this->uart.print("[ERROR] Failed to parse JSON.");
+                this->uart.print(F("[ERROR] Failed to parse JSON."));
                 this->led.off();
                 return;
             }
@@ -1829,7 +1201,7 @@ void FlipperHTTP::loop()
             // Extract values from JSON
             if (!doc.containsKey("url") || !doc.containsKey("payload"))
             {
-                this->uart.println("[ERROR] JSON does not contain url or payload.");
+                this->uart.println(F("[ERROR] JSON does not contain url or payload."));
                 this->led.off();
                 return;
             }
@@ -1853,26 +1225,27 @@ void FlipperHTTP::loop()
             }
 
             // DELETE request
-            String deleteData = this->delete_request(url, payload, headerKeys, headerValues, headerSize);
+            String deleteData = this->request("DELETE", url, payload, headerKeys, headerValues, headerSize);
             if (deleteData != "")
             {
-                this->uart.println("[DELETE/SUCCESS] DELETE request successful.");
+                this->uart.println(F("[DELETE/SUCCESS] DELETE request successful."));
                 this->uart.println(deleteData);
                 this->uart.flush();
                 this->uart.println();
-                this->uart.println("[DELETE/END]");
+                this->uart.println(F("[DELETE/END]"));
             }
             else
             {
-                this->uart.println("[ERROR] DELETE request failed or returned empty data.");
+                this->uart.println(F("[ERROR] DELETE request failed or returned empty data."));
             }
         }
+
         // Handle [GET/BYTES]
         else if (_data.startsWith("[GET/BYTES]"))
         {
             if (!this->isConnectedToWifi() && !this->connectToWifi())
             {
-                this->uart.println("[ERROR] Not connected to Wifi. Failed to reconnect.");
+                this->uart.println(F("[ERROR] Not connected to Wifi. Failed to reconnect."));
                 this->led.off();
                 return;
             }
@@ -1886,7 +1259,7 @@ void FlipperHTTP::loop()
 
             if (error)
             {
-                this->uart.print("[ERROR] Failed to parse JSON.");
+                this->uart.print(F("[ERROR] Failed to parse JSON."));
                 this->led.off();
                 return;
             }
@@ -1894,7 +1267,7 @@ void FlipperHTTP::loop()
             // Extract values from JSON
             if (!doc.containsKey("url"))
             {
-                this->uart.println("[ERROR] JSON does not contain url.");
+                this->uart.println(F("[ERROR] JSON does not contain url."));
                 this->led.off();
                 return;
             }
@@ -1917,9 +1290,9 @@ void FlipperHTTP::loop()
             }
 
             // GET request
-            if (!this->stream_bytes_get(url, headerKeys, headerValues, headerSize))
+            if (!this->stream_bytes("GET", url, "", headerKeys, headerValues, headerSize))
             {
-                this->uart.println("[ERROR] GET request failed or returned empty data.");
+                this->uart.println(F("[ERROR] GET request failed or returned empty data."));
             }
         }
         // handle [POST/BYTES]
@@ -1927,7 +1300,7 @@ void FlipperHTTP::loop()
         {
             if (!this->isConnectedToWifi() && !this->connectToWifi())
             {
-                this->uart.println("[ERROR] Not connected to Wifi. Failed to reconnect.");
+                this->uart.println(F("[ERROR] Not connected to Wifi. Failed to reconnect."));
                 this->led.off();
                 return;
             }
@@ -1941,7 +1314,7 @@ void FlipperHTTP::loop()
 
             if (error)
             {
-                this->uart.print("[ERROR] Failed to parse JSON.");
+                this->uart.print(F("[ERROR] Failed to parse JSON."));
                 this->led.off();
                 return;
             }
@@ -1949,7 +1322,7 @@ void FlipperHTTP::loop()
             // Extract values from JSON
             if (!doc.containsKey("url") || !doc.containsKey("payload"))
             {
-                this->uart.println("[ERROR] JSON does not contain url or payload.");
+                this->uart.println(F("[ERROR] JSON does not contain url or payload."));
                 this->led.off();
                 return;
             }
@@ -1973,9 +1346,9 @@ void FlipperHTTP::loop()
             }
 
             // POST request
-            if (!this->stream_bytes_post(url, payload, headerKeys, headerValues, headerSize))
+            if (!this->stream_bytes("POST", url, payload, headerKeys, headerValues, headerSize))
             {
-                this->uart.println("[ERROR] POST request failed or returned empty data.");
+                this->uart.println(F("[ERROR] POST request failed or returned empty data."));
             }
         }
         // Handle [PARSE] command
@@ -1992,7 +1365,7 @@ void FlipperHTTP::loop()
 
             if (error)
             {
-                this->uart.print("[ERROR] Failed to parse JSON.");
+                this->uart.print(F("[ERROR] Failed to parse JSON."));
                 this->led.off();
                 return;
             }
@@ -2000,7 +1373,7 @@ void FlipperHTTP::loop()
             // Extract values from JSON
             if (!doc.containsKey("key") || !doc.containsKey("json"))
             {
-                this->uart.println("[ERROR] JSON does not contain key or json.");
+                this->uart.println(F("[ERROR] JSON does not contain key or json."));
                 this->led.off();
                 return;
             }
@@ -2013,7 +1386,7 @@ void FlipperHTTP::loop()
             }
             else
             {
-                this->uart.println("[ERROR] Key not found in JSON.");
+                this->uart.println(F("[ERROR] Key not found in JSON."));
             }
         }
         // Handle [PARSE/ARRAY] command
@@ -2033,7 +1406,7 @@ void FlipperHTTP::loop()
 
             if (error)
             {
-                this->uart.print("[ERROR] Failed to parse JSON.");
+                this->uart.print(F("[ERROR] Failed to parse JSON."));
                 this->led.off();
                 return;
             }
@@ -2041,7 +1414,7 @@ void FlipperHTTP::loop()
             // Extract values from JSON
             if (!doc.containsKey("key") || !doc.containsKey("index") || !doc.containsKey("json"))
             {
-                this->uart.println("[ERROR] JSON does not contain key, index, or json.");
+                this->uart.println(F("[ERROR] JSON does not contain key, index, or json."));
                 this->led.off();
                 return;
             }
@@ -2055,7 +1428,7 @@ void FlipperHTTP::loop()
             }
             else
             {
-                this->uart.println("[ERROR] Key not found in JSON.");
+                this->uart.println(F("[ERROR] Key not found in JSON."));
             }
         }
         // websocket
@@ -2070,7 +1443,7 @@ void FlipperHTTP::loop()
 
             if (error)
             {
-                this->uart.print("[ERROR] Failed to parse JSON.");
+                this->uart.print(F("[ERROR] Failed to parse JSON."));
                 this->led.off();
                 return;
             }
@@ -2078,14 +1451,14 @@ void FlipperHTTP::loop()
             // Extract values from JSON
             if (!doc.containsKey("url"))
             {
-                this->uart.println("[ERROR] JSON does not contain url.");
+                this->uart.println(F("[ERROR] JSON does not contain url."));
                 this->led.off();
                 return;
             }
             const char *url = doc["url"];
             if (!doc.containsKey("port"))
             {
-                this->uart.println("[ERROR] JSON does not contain port.");
+                this->uart.println(F("[ERROR] JSON does not contain port."));
                 this->led.off();
                 return;
             }
