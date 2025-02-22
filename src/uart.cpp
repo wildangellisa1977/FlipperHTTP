@@ -50,7 +50,7 @@ void UART::flush()
 #endif
 }
 
-void UART::print(const String &str)
+void UART::print(String str)
 {
 #ifdef BOARD_PICO_W
     this->serial->print(str);
@@ -79,7 +79,7 @@ void UART::printf(const char *format, ...)
     va_end(args);
 }
 
-void UART::println(const String &str)
+void UART::println(String str)
 {
 #ifdef BOARD_PICO_W
     this->serial->println(str);

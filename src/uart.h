@@ -9,9 +9,9 @@ public:
     void begin(uint32_t baudrate);
     void flush();
     void clear_buffer();
-    void print(const String &str);
+    void print(String str);
     void printf(const char *format, ...);
-    void println(const String &str = "");
+    void println(String str = "");
     uint8_t read();
     uint8_t readBytes(uint8_t *buffer, size_t size);
     String read_serial_line();

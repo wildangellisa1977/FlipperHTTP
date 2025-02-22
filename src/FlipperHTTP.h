@@ -3,7 +3,7 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over serial.
 Created: 2024-09-30
-Updated: 2025-02-16
+Updated: 2025-02-21
 
 Change Log:
 - 2024-09-30: Initial commit
@@ -29,6 +29,7 @@ Change Log:
     - Combined source files from all supported boards into one file
 - 2025-02-03: Added WebSockets support: [SOCKET/START] and [SOCKET/STOP]
 - 2025-02-16: Added support for the ESP32-C3 board (@dj1ch)
+- 2025-02-21: Simplified HTTP requests
 */
 #pragma once
 #include <WiFi.h>
@@ -50,27 +51,27 @@ public:
     {
     }
 
-    void clearSerialBuffer();                                                                                                 // Clear serial buffer to avoid any residual data
-    bool connectToWifi();                                                                                                     // Connect to Wifi using the loaded SSID and Password
-    String delete_request(String url, String payload);                                                                        // Delete request
-    String delete_request(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize);  // Delete request with headers
-    String get(String url);                                                                                                   // Get request
-    String get(String url, const char *headerKeys[], const char *headerValues[], int headerSize);                             // Get request with headers
-    String getIPAddress() { return WiFi.localIP().toString(); }                                                               // get IP addresss
-    bool isConnectedToWifi() { return WiFi.status() == WL_CONNECTED; }                                                        // Check if the Dev Board is connected to Wifi
-    bool loadWifiSettings();                                                                                                  // Load Wifi settings from storage
-    String post(String url, String payload);                                                                                  // Post request
-    String post(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize);            // Post request with headers
-    String put(String url, String payload);                                                                                   // Put request
-    String put(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize);             // Put request with headers
-    bool saveWifiSettings(String data);                                                                                       // Save and Load settings to and from storage
-    String scanWifiNetworks();                                                                                                // returns a string of all wifi networks
-    void setup();                                                                                                             // Arduino setup function
-    bool stream_bytes_get(String url, const char *headerKeys[], const char *headerValues[], int headerSize);                  // Get request to process bytes
-    bool stream_bytes_post(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize); // Post request to process bytes
-    String readSerialLine();                                                                                                  // Read serial data until newline character
-    bool read_serial_settings(String receivedData, bool connectAfterSave);                                                    // Read the serial data and save the settings
-    bool upload_bytes(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize);      // Upload bytes to server
+    void clearSerialBuffer();                                          // Clear serial buffer to avoid any residual data
+    bool connectToWifi();                                              // Connect to Wifi using the loaded SSID and Password
+    String getIPAddress() { return WiFi.localIP().toString(); }        // get IP addresss
+    bool isConnectedToWifi() { return WiFi.status() == WL_CONNECTED; } // Check if the Dev Board is connected to Wifi
+    bool loadWifiSettings();                                           // Load Wifi settings from storage
+    //
+    String request(
+        const char *method,                   // HTTP method
+        String url,                           // URL to send the request to
+        String payload = "",                  // Payload to send with the request
+        const char *headerKeys[] = nullptr,   // Array of header keys
+        const char *headerValues[] = nullptr, // Array of header values
+        int headerSize = 0                    // Number of headers
+    );
+    //
+    bool saveWifiSettings(String data);                                                                                                      // Save and Load settings to and from storage
+    String scanWifiNetworks();                                                                                                               // returns a string of all wifi networks
+    void setup();                                                                                                                            // Arduino setup function
+    bool stream_bytes(const char *method, String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize); // Stream bytes from server
+    bool read_serial_settings(String receivedData, bool connectAfterSave);                                                                   // Read the serial data and save the settings
+    bool upload_bytes(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize);                     // stream bytes to server
 
     void loop(); // Main loop for flipper-http.ino that handles all of the commands
 private:
@@ -90,7 +91,7 @@ private:
 
     // Root CA from letsencrypt
     // get it here: https://letsencrypt.org/certificates/
-    const char *root_ca =
+    const PROGMEM char *root_ca =
         "-----BEGIN CERTIFICATE-----\n"
         "MIIFazCCA1OgAwIBAgIRAIIQz7DSQONZRGPgu2OCiwAwDQYJKoZIhvcNAQELBQAw\n"
         "TzELMAkGA1UEBhMCVVMxKTAnBgNVBAoTIEludGVybmV0IFNlY3VyaXR5IFJlc2Vh\n"
