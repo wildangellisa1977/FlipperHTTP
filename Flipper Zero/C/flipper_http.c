@@ -286,6 +286,11 @@ int32_t flipper_http_worker(void *context)
                     break;
                 }
 
+                fhttp->bytes_received += received;
+
+                // print amount of bytes received
+                // FURI_LOG_I(HTTP_TAG, "Bytes received: %d", fhttp->bytes_received);
+
                 // Append the received byte to the file if saving is enabled
                 if (fhttp->save_bytes)
                 {
@@ -1393,9 +1398,10 @@ static void set_header(FlipperHTTP *fhttp)
 
     size_t error_size = -1;
 
-    // reset the content length and status code
+    // reset values
     fhttp->content_length = 0;
     fhttp->status_code = 0;
+    fhttp->bytes_received = 0;
 
     FuriString *furi_string = furi_string_alloc_set_str(fhttp->last_response);
     if (!furi_string)

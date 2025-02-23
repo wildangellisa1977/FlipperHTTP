@@ -82,6 +82,8 @@ typedef struct
 
     bool just_started_bytes; // Indicates if bytes data reception has just started
 
+    size_t bytes_received; // Number of bytes received
+
     char rx_line_buffer[RX_LINE_BUFFER_SIZE];
     uint8_t file_buffer[FILE_BUFFER_SIZE];
     size_t file_buffer_len;
