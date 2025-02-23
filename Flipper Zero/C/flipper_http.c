@@ -350,10 +350,7 @@ void get_timeout_timer_callback(void *context)
     FURI_LOG_E(HTTP_TAG, "Timeout reached without receiving the end.");
 
     // Reset the state
-    fhttp->started_receiving_get = false;
-    fhttp->started_receiving_post = false;
-    fhttp->started_receiving_put = false;
-    fhttp->started_receiving_delete = false;
+    fhttp->started_receiving = false;
 
     // Update UART state
     fhttp->state = ISSUE;
@@ -1021,6 +1018,9 @@ bool flipper_http_get_request(FlipperHTTP *fhttp, const char *url)
         return false;
     }
 
+    // set method
+    fhttp->method = GET;
+
     // The response will be handled asynchronously via the callback
     return true;
 }
@@ -1065,6 +1065,9 @@ bool flipper_http_get_request_with_headers(FlipperHTTP *fhttp, const char *url, 
         return false;
     }
 
+    // set method
+    fhttp->method = GET;
+
     // The response will be handled asynchronously via the callback
     return true;
 }
@@ -1107,6 +1110,9 @@ bool flipper_http_get_request_bytes(FlipperHTTP *fhttp, const char *url, const c
         FURI_LOG_E("FlipperHTTP", "Failed to send GET request command with headers.");
         return false;
     }
+
+    // set method
+    fhttp->method = BYTES;
 
     // The response will be handled asynchronously via the callback
     return true;
@@ -1163,6 +1169,9 @@ bool flipper_http_post_request_with_headers(
         return false;
     }
 
+    // set method
+    fhttp->method = POST;
+
     // The response will be handled asynchronously via the callback
     return true;
 }
@@ -1212,6 +1221,9 @@ bool flipper_http_post_request_bytes(FlipperHTTP *fhttp, const char *url, const 
         FURI_LOG_E("FlipperHTTP", "Failed to send POST request command with headers and data.");
         return false;
     }
+
+    // set method
+    fhttp->method = BYTES;
 
     // The response will be handled asynchronously via the callback
     return true;
@@ -1266,6 +1278,9 @@ bool flipper_http_put_request_with_headers(
         FURI_LOG_E("FlipperHTTP", "Failed to send PUT request command with headers and data.");
         return false;
     }
+
+    // set method
+    fhttp->method = PUT;
 
     // The response will be handled asynchronously via the callback
     return true;
@@ -1322,6 +1337,9 @@ bool flipper_http_delete_request_with_headers(
         FURI_LOG_E("FlipperHTTP", "Failed to send DELETE request command with headers and data.");
         return false;
     }
+
+    // set method
+    fhttp->method = DELETE;
 
     // The response will be handled asynchronously via the callback
     return true;
@@ -1483,7 +1501,7 @@ void flipper_http_rx_callback(const char *line, void *context)
     // FURI_LOG_I(HTTP_TAG, "Received UART line: %s", line);
 
     // Check if we've started receiving data from a GET request
-    if (fhttp->started_receiving_get)
+    if (fhttp->started_receiving && fhttp->method == GET)
     {
         // Restart the timeout timer each time new data is received
         furi_timer_restart(fhttp->get_timeout_timer, TIMEOUT_DURATION_TICKS);
@@ -1493,8 +1511,8 @@ void flipper_http_rx_callback(const char *line, void *context)
             FURI_LOG_I(HTTP_TAG, "GET request completed.");
             // Stop the timer since we've completed the GET request
             furi_timer_stop(fhttp->get_timeout_timer);
-            fhttp->started_receiving_get = false;
-            fhttp->just_started_get = false;
+            fhttp->started_receiving = false;
+            fhttp->just_started = false;
             fhttp->state = IDLE;
             fhttp->save_bytes = false;
             fhttp->save_received_data = false;
@@ -1536,24 +1554,24 @@ void flipper_http_rx_callback(const char *line, void *context)
         // Append the new line to the existing data
         if (fhttp->save_received_data &&
             !flipper_http_append_to_file(
-                line, strlen(line), !fhttp->just_started_get, fhttp->file_path))
+                line, strlen(line), !fhttp->just_started, fhttp->file_path))
         {
             FURI_LOG_E(HTTP_TAG, "Failed to append data to file.");
-            fhttp->started_receiving_get = false;
-            fhttp->just_started_get = false;
+            fhttp->started_receiving = false;
+            fhttp->just_started = false;
             fhttp->state = IDLE;
             return;
         }
 
-        if (!fhttp->just_started_get)
+        if (!fhttp->just_started)
         {
-            fhttp->just_started_get = true;
+            fhttp->just_started = true;
         }
         return;
     }
 
     // Check if we've started receiving data from a POST request
-    else if (fhttp->started_receiving_post)
+    else if (fhttp->started_receiving && fhttp->method == POST)
     {
         // Restart the timeout timer each time new data is received
         furi_timer_restart(fhttp->get_timeout_timer, TIMEOUT_DURATION_TICKS);
@@ -1563,8 +1581,8 @@ void flipper_http_rx_callback(const char *line, void *context)
             FURI_LOG_I(HTTP_TAG, "POST request completed.");
             // Stop the timer since we've completed the POST request
             furi_timer_stop(fhttp->get_timeout_timer);
-            fhttp->started_receiving_post = false;
-            fhttp->just_started_post = false;
+            fhttp->started_receiving = false;
+            fhttp->just_started = false;
             fhttp->state = IDLE;
             fhttp->save_bytes = false;
             fhttp->save_received_data = false;
@@ -1606,24 +1624,24 @@ void flipper_http_rx_callback(const char *line, void *context)
         // Append the new line to the existing data
         if (fhttp->save_received_data &&
             !flipper_http_append_to_file(
-                line, strlen(line), !fhttp->just_started_post, fhttp->file_path))
+                line, strlen(line), !fhttp->just_started, fhttp->file_path))
         {
             FURI_LOG_E(HTTP_TAG, "Failed to append data to file.");
-            fhttp->started_receiving_post = false;
-            fhttp->just_started_post = false;
+            fhttp->started_receiving = false;
+            fhttp->just_started = false;
             fhttp->state = IDLE;
             return;
         }
 
-        if (!fhttp->just_started_post)
+        if (!fhttp->just_started)
         {
-            fhttp->just_started_post = true;
+            fhttp->just_started = true;
         }
         return;
     }
 
     // Check if we've started receiving data from a PUT request
-    else if (fhttp->started_receiving_put)
+    else if (fhttp->started_receiving && fhttp->method == PUT)
     {
         // Restart the timeout timer each time new data is received
         furi_timer_restart(fhttp->get_timeout_timer, TIMEOUT_DURATION_TICKS);
@@ -1633,8 +1651,8 @@ void flipper_http_rx_callback(const char *line, void *context)
             FURI_LOG_I(HTTP_TAG, "PUT request completed.");
             // Stop the timer since we've completed the PUT request
             furi_timer_stop(fhttp->get_timeout_timer);
-            fhttp->started_receiving_put = false;
-            fhttp->just_started_put = false;
+            fhttp->started_receiving = false;
+            fhttp->just_started = false;
             fhttp->state = IDLE;
             fhttp->save_bytes = false;
             fhttp->is_bytes_request = false;
@@ -1645,24 +1663,24 @@ void flipper_http_rx_callback(const char *line, void *context)
         // Append the new line to the existing data
         if (fhttp->save_received_data &&
             !flipper_http_append_to_file(
-                line, strlen(line), !fhttp->just_started_put, fhttp->file_path))
+                line, strlen(line), !fhttp->just_started, fhttp->file_path))
         {
             FURI_LOG_E(HTTP_TAG, "Failed to append data to file.");
-            fhttp->started_receiving_put = false;
-            fhttp->just_started_put = false;
+            fhttp->started_receiving = false;
+            fhttp->just_started = false;
             fhttp->state = IDLE;
             return;
         }
 
-        if (!fhttp->just_started_put)
+        if (!fhttp->just_started)
         {
-            fhttp->just_started_put = true;
+            fhttp->just_started = true;
         }
         return;
     }
 
     // Check if we've started receiving data from a DELETE request
-    else if (fhttp->started_receiving_delete)
+    else if (fhttp->started_receiving && fhttp->method == DELETE)
     {
         // Restart the timeout timer each time new data is received
         furi_timer_restart(fhttp->get_timeout_timer, TIMEOUT_DURATION_TICKS);
@@ -1672,8 +1690,8 @@ void flipper_http_rx_callback(const char *line, void *context)
             FURI_LOG_I(HTTP_TAG, "DELETE request completed.");
             // Stop the timer since we've completed the DELETE request
             furi_timer_stop(fhttp->get_timeout_timer);
-            fhttp->started_receiving_delete = false;
-            fhttp->just_started_delete = false;
+            fhttp->started_receiving = false;
+            fhttp->just_started = false;
             fhttp->state = IDLE;
             fhttp->save_bytes = false;
             fhttp->is_bytes_request = false;
@@ -1684,18 +1702,18 @@ void flipper_http_rx_callback(const char *line, void *context)
         // Append the new line to the existing data
         if (fhttp->save_received_data &&
             !flipper_http_append_to_file(
-                line, strlen(line), !fhttp->just_started_delete, fhttp->file_path))
+                line, strlen(line), !fhttp->just_started, fhttp->file_path))
         {
             FURI_LOG_E(HTTP_TAG, "Failed to append data to file.");
-            fhttp->started_receiving_delete = false;
-            fhttp->just_started_delete = false;
+            fhttp->started_receiving = false;
+            fhttp->just_started = false;
             fhttp->state = IDLE;
             return;
         }
 
-        if (!fhttp->just_started_delete)
+        if (!fhttp->just_started)
         {
-            fhttp->just_started_delete = true;
+            fhttp->just_started = true;
         }
         return;
     }
@@ -1719,7 +1737,7 @@ void flipper_http_rx_callback(const char *line, void *context)
         FURI_LOG_I(HTTP_TAG, "GET request succeeded.");
         furi_timer_start(fhttp->get_timeout_timer, TIMEOUT_DURATION_TICKS);
 
-        fhttp->started_receiving_get = true;
+        fhttp->started_receiving = true;
         fhttp->state = RECEIVING;
 
         // for GET request, save data only if it's a bytes request
@@ -1736,7 +1754,7 @@ void flipper_http_rx_callback(const char *line, void *context)
         FURI_LOG_I(HTTP_TAG, "POST request succeeded.");
         furi_timer_start(fhttp->get_timeout_timer, TIMEOUT_DURATION_TICKS);
 
-        fhttp->started_receiving_post = true;
+        fhttp->started_receiving = true;
         fhttp->state = RECEIVING;
 
         // for POST request, save data only if it's a bytes request
@@ -1753,7 +1771,7 @@ void flipper_http_rx_callback(const char *line, void *context)
         FURI_LOG_I(HTTP_TAG, "PUT request succeeded.");
         furi_timer_start(fhttp->get_timeout_timer, TIMEOUT_DURATION_TICKS);
 
-        fhttp->started_receiving_put = true;
+        fhttp->started_receiving = true;
         fhttp->state = RECEIVING;
 
         // set header
@@ -1765,7 +1783,7 @@ void flipper_http_rx_callback(const char *line, void *context)
         FURI_LOG_I(HTTP_TAG, "DELETE request succeeded.");
         furi_timer_start(fhttp->get_timeout_timer, TIMEOUT_DURATION_TICKS);
 
-        fhttp->started_receiving_delete = true;
+        fhttp->started_receiving = true;
         fhttp->state = RECEIVING;
 
         // set header

@@ -14,8 +14,6 @@
 #include <furi_hal_serial.h>
 #include <storage/storage.h>
 
-// STORAGE_EXT_PATH_PREFIX is defined in the Furi SDK as /ext
-
 #define HTTP_TAG "FlipperHTTP"            // change this to your app name
 #define http_tag "flipper_http"           // change this to your app id
 #define UART_CH (FuriHalSerialIdUsart)    // UART channel
@@ -46,6 +44,16 @@ typedef enum
     WorkerEvtRxDone = (1 << 1),
 } WorkerEvtFlags;
 
+typedef enum
+{
+    GET,
+    POST,
+    PUT,
+    DELETE,
+    BYTES,
+    WEBSOCKET,
+} HTTPMethod;
+
 // FlipperHTTP Structure
 typedef struct
 {
@@ -56,6 +64,7 @@ typedef struct
     FlipperHTTP_Callback handle_rx_line_cb; // Callback for received lines
     void *callback_context;                 // Context for the callback
     SerialState state;                      // State of the UART
+    HTTPMethod method;                      // HTTP method
 
     // variable to store the last received data from the UART
     char *last_response;
@@ -64,17 +73,8 @@ typedef struct
     // Timer-related members
     FuriTimer *get_timeout_timer; // Timer for HTTP request timeout
 
-    bool started_receiving_get; // Indicates if a GET request has started
-    bool just_started_get;      // Indicates if GET data reception has just started
-
-    bool started_receiving_post; // Indicates if a POST request has started
-    bool just_started_post;      // Indicates if POST data reception has just started
-
-    bool started_receiving_put; // Indicates if a PUT request has started
-    bool just_started_put;      // Indicates if PUT data reception has just started
-
-    bool started_receiving_delete; // Indicates if a DELETE request has started
-    bool just_started_delete;      // Indicates if DELETE data reception has just started
+    bool started_receiving; // Indicates if a request has started
+    bool just_started;      // Indicates if data reception has just started
 
     bool is_bytes_request;   // Flag to indicate if the request is for bytes
     bool save_bytes;         // Flag to save the received data to a file
