@@ -76,12 +76,9 @@ typedef struct
     bool started_receiving_delete; // Indicates if a DELETE request has started
     bool just_started_delete;      // Indicates if DELETE data reception has just started
 
-    // Buffer to hold the raw bytes received from the UART
-    uint8_t *received_bytes;
-    size_t received_bytes_len; // Length of the received bytes
-    bool is_bytes_request;     // Flag to indicate if the request is for bytes
-    bool save_bytes;           // Flag to save the received data to a file
-    bool save_received_data;   // Flag to save the received data to a file
+    bool is_bytes_request;   // Flag to indicate if the request is for bytes
+    bool save_bytes;         // Flag to save the received data to a file
+    bool save_received_data; // Flag to save the received data to a file
 
     bool just_started_bytes; // Indicates if bytes data reception has just started
 
