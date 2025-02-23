@@ -88,6 +88,9 @@ typedef struct
     char rx_line_buffer[RX_LINE_BUFFER_SIZE];
     uint8_t file_buffer[FILE_BUFFER_SIZE];
     size_t file_buffer_len;
+    //
+    size_t content_length; // Length of the content received
+    int status_code;       // HTTP status code
 } FlipperHTTP;
 
 // fhttp.last_response holds the last received data from the UART

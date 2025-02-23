@@ -1363,6 +1363,80 @@ static char *trim(const char *str)
     return trimmed_str;
 }
 
+// Function to set content length and status code
+static void set_header(FlipperHTTP *fhttp)
+{
+    // example response: [GET/SUCCESS]{"Status-Code":200,"Content-Length":12528}
+    if (!fhttp)
+    {
+        FURI_LOG_E(HTTP_TAG, "Invalid arguments provided to set_header.");
+        return;
+    }
+
+    size_t error_size = -1;
+
+    // reset the content length and status code
+    fhttp->content_length = 0;
+    fhttp->status_code = 0;
+
+    FuriString *furi_string = furi_string_alloc_set_str(fhttp->last_response);
+    if (!furi_string)
+    {
+        FURI_LOG_E(HTTP_TAG, "Failed to allocate memory for furi_string.");
+        return;
+    }
+
+    size_t status_code_start = furi_string_search_str(furi_string, "\"Status-Code\":", 0);
+    if (status_code_start != error_size)
+    {
+        // trim everything, including the status code and colon
+        furi_string_right(furi_string, status_code_start + strlen("\"Status-Code\":"));
+
+        // find comma (we have this currently: 200,"Content-Length":12528})
+        size_t comma = furi_string_search_str(furi_string, ",\"Content-Length\":", 0);
+        if (comma == error_size)
+        {
+            FURI_LOG_E(HTTP_TAG, "Failed to find comma in furi_string.");
+            furi_string_free(furi_string);
+            return;
+        }
+
+        // set status code
+        FuriString *status_code_str = furi_string_alloc();
+
+        // dest, src, start, length
+        furi_string_set_n(status_code_str, furi_string, 0, comma);
+        fhttp->status_code = atoi(furi_string_get_cstr(status_code_str));
+        furi_string_free(status_code_str);
+
+        // trim left to remove everything before the content length
+        furi_string_right(furi_string, comma + strlen(",\"Content-Length\":"));
+
+        // find closing brace (we have this currently: 12528})
+        size_t closing_brace = furi_string_search_str(furi_string, "}", 0);
+        if (closing_brace == error_size)
+        {
+            FURI_LOG_E(HTTP_TAG, "Failed to find closing brace in furi_string.");
+            furi_string_free(furi_string);
+            return;
+        }
+
+        // set content length
+        FuriString *content_length_str = furi_string_alloc();
+
+        // dest, src, start, length
+        furi_string_set_n(content_length_str, furi_string, 0, closing_brace);
+        fhttp->content_length = atoi(furi_string_get_cstr(content_length_str));
+        furi_string_free(content_length_str);
+    }
+
+    // print results
+    // FURI_LOG_I(HTTP_TAG, "Status Code: %d", fhttp->status_code);
+    // FURI_LOG_I(HTTP_TAG, "Content Length: %d", fhttp->content_length);
+
+    // free the furi_string
+    furi_string_free(furi_string);
+}
 // Function to handle received data asynchronously
 /**
  * @brief      Callback function to handle received data asynchronously.
@@ -1643,41 +1717,59 @@ void flipper_http_rx_callback(const char *line, void *context)
     else if (strstr(line, "[GET/SUCCESS]") != NULL)
     {
         FURI_LOG_I(HTTP_TAG, "GET request succeeded.");
-        fhttp->started_receiving_get = true;
         furi_timer_start(fhttp->get_timeout_timer, TIMEOUT_DURATION_TICKS);
+
+        fhttp->started_receiving_get = true;
         fhttp->state = RECEIVING;
+
         // for GET request, save data only if it's a bytes request
         fhttp->save_bytes = fhttp->is_bytes_request;
         fhttp->just_started_bytes = true;
         fhttp->file_buffer_len = 0;
+
+        // set header
+        set_header(fhttp);
         return;
     }
     else if (strstr(line, "[POST/SUCCESS]") != NULL)
     {
         FURI_LOG_I(HTTP_TAG, "POST request succeeded.");
-        fhttp->started_receiving_post = true;
         furi_timer_start(fhttp->get_timeout_timer, TIMEOUT_DURATION_TICKS);
+
+        fhttp->started_receiving_post = true;
         fhttp->state = RECEIVING;
+
         // for POST request, save data only if it's a bytes request
         fhttp->save_bytes = fhttp->is_bytes_request;
         fhttp->just_started_bytes = true;
         fhttp->file_buffer_len = 0;
+
+        // set header
+        set_header(fhttp);
         return;
     }
     else if (strstr(line, "[PUT/SUCCESS]") != NULL)
     {
         FURI_LOG_I(HTTP_TAG, "PUT request succeeded.");
-        fhttp->started_receiving_put = true;
         furi_timer_start(fhttp->get_timeout_timer, TIMEOUT_DURATION_TICKS);
+
+        fhttp->started_receiving_put = true;
         fhttp->state = RECEIVING;
+
+        // set header
+        set_header(fhttp);
         return;
     }
     else if (strstr(line, "[DELETE/SUCCESS]") != NULL)
     {
         FURI_LOG_I(HTTP_TAG, "DELETE request succeeded.");
-        fhttp->started_receiving_delete = true;
         furi_timer_start(fhttp->get_timeout_timer, TIMEOUT_DURATION_TICKS);
+
+        fhttp->started_receiving_delete = true;
         fhttp->state = RECEIVING;
+
+        // set header
+        set_header(fhttp);
         return;
     }
     else if (strstr(line, "[DISCONNECTED]") != NULL)
