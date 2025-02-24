@@ -14,13 +14,13 @@ int32_t main(void *p)
     }
 
     // Try to wait for pong response.
-    if (!flipper_http_ping(fhttp))
+    if (!flipper_http_send_command(fhttp, HTTP_CMD_PING))
     {
         FURI_LOG_E(TAG, "Failed to ping the device");
         return -1;
     }
     uint8_t counter = 10;
-    while (fhttp.state == INACTIVE && --counter > 0)
+    while (fhttp->state == INACTIVE && --counter > 0)
     {
         FURI_LOG_D(TAG, "Waiting for PONG");
         furi_delay_ms(100);
@@ -32,13 +32,16 @@ int32_t main(void *p)
     }
 
     // Setup/send request
-    if (!flipper_http_get_request_with_headers(fhttp, "https://catfact.ninja/fact", "{\"Content-Type\":\"application/json\"}"))
+    if (!flipper_http_request(fhttp, GET, "https://catfact.ninja/fact", "{\"Content-Type\":\"application/json\"}", NULL))
     {
         FURI_LOG_E(TAG, "Failed to send GET request");
         return -1;
     }
+
     furi_timer_start(fhttp->get_timeout_timer, TIMEOUT_DURATION_TICKS);
+
     fhttp->state = RECEIVING;
+
     while (fhttp->state == RECEIVING && furi_timer_is_running(fhttp->get_timeout_timer) > 0)
     {
         // Wait for the request to be received

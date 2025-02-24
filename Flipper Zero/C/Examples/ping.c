@@ -13,7 +13,7 @@ int32_t main(void *p)
         return -1;
     }
 
-    if (!flipper_http_ping(fhttp))
+    if (!flipper_http_send_command(fhttp, HTTP_CMD_PING))
     {
         FURI_LOG_E(TAG, "Failed to ping the device");
         return -1;
@@ -21,7 +21,7 @@ int32_t main(void *p)
 
     // Try to wait for pong response.
     uint8_t counter = 10;
-    while (fhttp.state == INACTIVE && --counter > 0)
+    while (fhttp->state == INACTIVE && --counter > 0)
     {
         FURI_LOG_D(TAG, "Waiting for PONG");
         furi_delay_ms(100);
