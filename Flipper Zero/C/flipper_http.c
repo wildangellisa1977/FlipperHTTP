@@ -2,253 +2,15 @@
 // License: MIT
 // Author: JBlanked
 // File: flipper_http.c
-#include <flipper_http/flipper_http.h> // change this to where flipper_http.h is located
+#include <flipper_http/flipper_http.h>
 
-// Function to append received data to file
-// make sure to initialize the file path before calling this function
-bool flipper_http_append_to_file(
-    const void *data,
-    size_t data_size,
-    bool start_new_file,
-    char *file_path)
-{
-    Storage *storage = furi_record_open(RECORD_STORAGE);
-    File *file = storage_file_alloc(storage);
-
-    if (start_new_file)
-    {
-        // Delete the file if it already exists
-        if (storage_file_exists(storage, file_path))
-        {
-            if (!storage_simply_remove_recursive(storage, file_path))
-            {
-                FURI_LOG_E(HTTP_TAG, "Failed to delete file: %s", file_path);
-                storage_file_free(file);
-                furi_record_close(RECORD_STORAGE);
-                return false;
-            }
-        }
-        // Open the file in write mode
-        if (!storage_file_open(file, file_path, FSAM_WRITE, FSOM_CREATE_ALWAYS))
-        {
-            FURI_LOG_E(HTTP_TAG, "Failed to open file for writing: %s", file_path);
-            storage_file_free(file);
-            furi_record_close(RECORD_STORAGE);
-            return false;
-        }
-    }
-    else
-    {
-        // Open the file in append mode
-        if (!storage_file_open(file, file_path, FSAM_WRITE, FSOM_OPEN_APPEND))
-        {
-            FURI_LOG_E(HTTP_TAG, "Failed to open file for appending: %s", file_path);
-            storage_file_free(file);
-            furi_record_close(RECORD_STORAGE);
-            return false;
-        }
-    }
-
-    // Write the data to the file
-    if (storage_file_write(file, data, data_size) != data_size)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to append data to file");
-        storage_file_close(file);
-        storage_file_free(file);
-        furi_record_close(RECORD_STORAGE);
-        return false;
-    }
-
-    storage_file_close(file);
-    storage_file_free(file);
-    furi_record_close(RECORD_STORAGE);
-    return true;
-}
-
-FuriString *flipper_http_load_from_file(char *file_path)
-{
-    // Open the storage record
-    Storage *storage = furi_record_open(RECORD_STORAGE);
-    if (!storage)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to open storage record");
-        return NULL;
-    }
-
-    // Allocate a file handle
-    File *file = storage_file_alloc(storage);
-    if (!file)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to allocate storage file");
-        furi_record_close(RECORD_STORAGE);
-        return NULL;
-    }
-
-    // Open the file for reading
-    if (!storage_file_open(file, file_path, FSAM_READ, FSOM_OPEN_EXISTING))
-    {
-        storage_file_free(file);
-        furi_record_close(RECORD_STORAGE);
-        FURI_LOG_E(HTTP_TAG, "Failed to open file for reading: %s", file_path);
-        return NULL;
-    }
-
-    // Allocate a FuriString to hold the received data
-    FuriString *str_result = furi_string_alloc();
-    if (!str_result)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to allocate FuriString");
-        storage_file_close(file);
-        storage_file_free(file);
-        furi_record_close(RECORD_STORAGE);
-        return NULL;
-    }
-
-    // Reset the FuriString to ensure it's empty before reading
-    furi_string_reset(str_result);
-
-    // Define a buffer to hold the read data
-    uint8_t *buffer = (uint8_t *)malloc(MAX_FILE_SHOW);
-    if (!buffer)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to allocate buffer");
-        furi_string_free(str_result);
-        storage_file_close(file);
-        storage_file_free(file);
-        furi_record_close(RECORD_STORAGE);
-        return NULL;
-    }
-
-    // Read data into the buffer
-    size_t read_count = storage_file_read(file, buffer, MAX_FILE_SHOW);
-    if (storage_file_get_error(file) != FSE_OK)
-    {
-        FURI_LOG_E(HTTP_TAG, "Error reading from file.");
-        furi_string_free(str_result);
-        storage_file_close(file);
-        storage_file_free(file);
-        furi_record_close(RECORD_STORAGE);
-        return NULL;
-    }
-
-    // Append each byte to the FuriString
-    for (size_t i = 0; i < read_count; i++)
-    {
-        furi_string_push_back(str_result, buffer[i]);
-    }
-
-    // Clean up
-    storage_file_close(file);
-    storage_file_free(file);
-    furi_record_close(RECORD_STORAGE);
-    free(buffer);
-    return str_result;
-}
-
-FuriString *flipper_http_load_from_file_with_limit(char *file_path, size_t limit)
-{
-    // Open the storage record
-    Storage *storage = furi_record_open(RECORD_STORAGE);
-    if (!storage)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to open storage record");
-        return NULL;
-    }
-
-    // Allocate a file handle
-    File *file = storage_file_alloc(storage);
-    if (!file)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to allocate storage file");
-        furi_record_close(RECORD_STORAGE);
-        return NULL;
-    }
-
-    // Open the file for reading
-    if (!storage_file_open(file, file_path, FSAM_READ, FSOM_OPEN_EXISTING))
-    {
-        storage_file_free(file);
-        furi_record_close(RECORD_STORAGE);
-        FURI_LOG_E(HTTP_TAG, "Failed to open file for reading: %s", file_path);
-        return NULL;
-    }
-
-    if (memmgr_get_free_heap() < limit)
-    {
-        FURI_LOG_E(HTTP_TAG, "Not enough heap to read file.");
-        storage_file_close(file);
-        storage_file_free(file);
-        furi_record_close(RECORD_STORAGE);
-        return NULL;
-    }
-
-    // Allocate a buffer to hold the read data
-    uint8_t *buffer = (uint8_t *)malloc(limit);
-    if (!buffer)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to allocate buffer");
-        storage_file_close(file);
-        storage_file_free(file);
-        furi_record_close(RECORD_STORAGE);
-        return NULL;
-    }
-
-    // Allocate a FuriString with preallocated capacity
-    FuriString *str_result = furi_string_alloc();
-    if (!str_result)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to allocate FuriString");
-        free(buffer);
-        storage_file_close(file);
-        storage_file_free(file);
-        furi_record_close(RECORD_STORAGE);
-        return NULL;
-    }
-    furi_string_reserve(str_result, limit);
-
-    // Read data into the buffer
-    size_t read_count = storage_file_read(file, buffer, limit);
-    if (storage_file_get_error(file) != FSE_OK)
-    {
-        FURI_LOG_E(HTTP_TAG, "Error reading from file.");
-        furi_string_free(str_result);
-        free(buffer);
-        storage_file_close(file);
-        storage_file_free(file);
-        furi_record_close(RECORD_STORAGE);
-        return NULL;
-    }
-    if (read_count == 0)
-    {
-        FURI_LOG_E(HTTP_TAG, "No data read from file.");
-        furi_string_free(str_result);
-        free(buffer);
-        storage_file_close(file);
-        storage_file_free(file);
-        furi_record_close(RECORD_STORAGE);
-        return NULL;
-    }
-
-    // Append the entire buffer to FuriString in one operation
-    furi_string_cat_str(str_result, (char *)buffer);
-
-    // Clean up
-    storage_file_close(file);
-    storage_file_free(file);
-    furi_record_close(RECORD_STORAGE);
-    free(buffer);
-    return str_result;
-}
-
-// UART worker thread
 /**
  * @brief      Worker thread to handle UART data asynchronously.
  * @return     0
  * @param      context   The FlipperHTTP context.
  * @note       This function will handle received data asynchronously via the callback.
  */
-// UART worker thread
-int32_t flipper_http_worker(void *context)
+static int32_t flipper_http_worker(void *context)
 {
     if (!context)
     {
@@ -337,29 +99,6 @@ int32_t flipper_http_worker(void *context)
 
     return 0;
 }
-// Timer callback function
-/**
- * @brief      Callback function for the GET timeout timer.
- * @return     0
- * @param      context   The FlipperHTTP context.
- * @note       This function will be called when the GET request times out.
- */
-void get_timeout_timer_callback(void *context)
-{
-    FlipperHTTP *fhttp = (FlipperHTTP *)context;
-    if (!fhttp)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to get context.");
-        return;
-    }
-    FURI_LOG_E(HTTP_TAG, "Timeout reached without receiving the end.");
-
-    // Reset the state
-    fhttp->started_receiving = false;
-
-    // Update UART state
-    fhttp->state = ISSUE;
-}
 
 // UART RX Handler Callback (Interrupt Context)
 /**
@@ -370,7 +109,7 @@ void get_timeout_timer_callback(void *context)
  * @param      context   The FlipperHTTP context.
  * @note       This function will handle received data asynchronously via the callback.
  */
-void _flipper_http_rx_callback(
+static void _flipper_http_rx_callback(
     FuriHalSerialHandle *handle,
     FuriHalSerialRxEvent event,
     void *context)
@@ -388,6 +127,32 @@ void _flipper_http_rx_callback(
         furi_thread_flags_set(fhttp->rx_thread_id, WorkerEvtRxDone);
     }
 }
+
+// Timer callback function
+/**
+ * @brief      Callback function for the GET timeout timer.
+ * @return     0
+ * @param      context   The FlipperHTTP context.
+ * @note       This function will be called when the GET request times out.
+ */
+static void get_timeout_timer_callback(void *context)
+{
+    FlipperHTTP *fhttp = (FlipperHTTP *)context;
+    if (!fhttp)
+    {
+        FURI_LOG_E(HTTP_TAG, "Failed to get context.");
+        return;
+    }
+    FURI_LOG_E(HTTP_TAG, "Timeout reached without receiving the end.");
+
+    // Reset the state
+    fhttp->started_receiving = false;
+
+    // Update UART state
+    fhttp->state = ISSUE;
+}
+
+static void flipper_http_rx_callback(const char *line, void *context); // forward declaration
 
 // UART initialization function
 /**
@@ -580,166 +345,325 @@ void flipper_http_free(FlipperHTTP *fhttp)
     // FURI_LOG_I("FlipperHTTP", "UART deinitialized successfully.");
 }
 
-// Function to send data over UART with newline termination
 /**
- * @brief      Send data over UART with newline termination.
- * @return     true if the data was sent successfully, false otherwise.
- * @param fhttp The FlipperHTTP context
- * @param      data  The data to send over UART.
- * @note       The data will be sent over UART with a newline character appended.
+ * @brief      Append received data to a file.
+ * @return     true if the data was appended successfully, false otherwise.
+ * @param      data        The data to append to the file.
+ * @param      data_size   The size of the data to append.
+ * @param      start_new_file  Flag to indicate if a new file should be created.
+ * @param      file_path   The path to the file.
+ * @note       Make sure to initialize the file path before calling this function.
  */
-bool flipper_http_send_data(FlipperHTTP *fhttp, const char *data)
+bool flipper_http_append_to_file(
+    const void *data,
+    size_t data_size,
+    bool start_new_file,
+    char *file_path)
+{
+    Storage *storage = furi_record_open(RECORD_STORAGE);
+    File *file = storage_file_alloc(storage);
+
+    if (start_new_file)
+    {
+        // Delete the file if it already exists
+        if (storage_file_exists(storage, file_path))
+        {
+            if (!storage_simply_remove_recursive(storage, file_path))
+            {
+                FURI_LOG_E(HTTP_TAG, "Failed to delete file: %s", file_path);
+                storage_file_free(file);
+                furi_record_close(RECORD_STORAGE);
+                return false;
+            }
+        }
+        // Open the file in write mode
+        if (!storage_file_open(file, file_path, FSAM_WRITE, FSOM_CREATE_ALWAYS))
+        {
+            FURI_LOG_E(HTTP_TAG, "Failed to open file for writing: %s", file_path);
+            storage_file_free(file);
+            furi_record_close(RECORD_STORAGE);
+            return false;
+        }
+    }
+    else
+    {
+        // Open the file in append mode
+        if (!storage_file_open(file, file_path, FSAM_WRITE, FSOM_OPEN_APPEND))
+        {
+            FURI_LOG_E(HTTP_TAG, "Failed to open file for appending: %s", file_path);
+            storage_file_free(file);
+            furi_record_close(RECORD_STORAGE);
+            return false;
+        }
+    }
+
+    // Write the data to the file
+    if (storage_file_write(file, data, data_size) != data_size)
+    {
+        FURI_LOG_E(HTTP_TAG, "Failed to append data to file");
+        storage_file_close(file);
+        storage_file_free(file);
+        furi_record_close(RECORD_STORAGE);
+        return false;
+    }
+
+    storage_file_close(file);
+    storage_file_free(file);
+    furi_record_close(RECORD_STORAGE);
+    return true;
+}
+
+/**
+ * @brief      Load data from a file.
+ * @return     The loaded data as a FuriString.
+ * @param      file_path The path to the file to load.
+ */
+FuriString *flipper_http_load_from_file(char *file_path)
+{
+    // Open the storage record
+    Storage *storage = furi_record_open(RECORD_STORAGE);
+    if (!storage)
+    {
+        FURI_LOG_E(HTTP_TAG, "Failed to open storage record");
+        return NULL;
+    }
+
+    // Allocate a file handle
+    File *file = storage_file_alloc(storage);
+    if (!file)
+    {
+        FURI_LOG_E(HTTP_TAG, "Failed to allocate storage file");
+        furi_record_close(RECORD_STORAGE);
+        return NULL;
+    }
+
+    // Open the file for reading
+    if (!storage_file_open(file, file_path, FSAM_READ, FSOM_OPEN_EXISTING))
+    {
+        storage_file_free(file);
+        furi_record_close(RECORD_STORAGE);
+        FURI_LOG_E(HTTP_TAG, "Failed to open file for reading: %s", file_path);
+        return NULL;
+    }
+
+    // Allocate a FuriString to hold the received data
+    FuriString *str_result = furi_string_alloc();
+    if (!str_result)
+    {
+        FURI_LOG_E(HTTP_TAG, "Failed to allocate FuriString");
+        storage_file_close(file);
+        storage_file_free(file);
+        furi_record_close(RECORD_STORAGE);
+        return NULL;
+    }
+
+    // Reset the FuriString to ensure it's empty before reading
+    furi_string_reset(str_result);
+
+    // Define a buffer to hold the read data
+    uint8_t *buffer = (uint8_t *)malloc(MAX_FILE_SHOW);
+    if (!buffer)
+    {
+        FURI_LOG_E(HTTP_TAG, "Failed to allocate buffer");
+        furi_string_free(str_result);
+        storage_file_close(file);
+        storage_file_free(file);
+        furi_record_close(RECORD_STORAGE);
+        return NULL;
+    }
+
+    // Read data into the buffer
+    size_t read_count = storage_file_read(file, buffer, MAX_FILE_SHOW);
+    if (storage_file_get_error(file) != FSE_OK)
+    {
+        FURI_LOG_E(HTTP_TAG, "Error reading from file.");
+        furi_string_free(str_result);
+        storage_file_close(file);
+        storage_file_free(file);
+        furi_record_close(RECORD_STORAGE);
+        return NULL;
+    }
+
+    // Append each byte to the FuriString
+    for (size_t i = 0; i < read_count; i++)
+    {
+        furi_string_push_back(str_result, buffer[i]);
+    }
+
+    // Clean up
+    storage_file_close(file);
+    storage_file_free(file);
+    furi_record_close(RECORD_STORAGE);
+    free(buffer);
+    return str_result;
+}
+
+/**
+ * @brief      Load data from a file with a size limit.
+ * @return     The loaded data as a FuriString.
+ * @param      file_path The path to the file to load.
+ * @param      limit     The size limit for loading data.
+ */
+FuriString *flipper_http_load_from_file_with_limit(char *file_path, size_t limit)
+{
+    // Open the storage record
+    Storage *storage = furi_record_open(RECORD_STORAGE);
+    if (!storage)
+    {
+        FURI_LOG_E(HTTP_TAG, "Failed to open storage record");
+        return NULL;
+    }
+
+    // Allocate a file handle
+    File *file = storage_file_alloc(storage);
+    if (!file)
+    {
+        FURI_LOG_E(HTTP_TAG, "Failed to allocate storage file");
+        furi_record_close(RECORD_STORAGE);
+        return NULL;
+    }
+
+    // Open the file for reading
+    if (!storage_file_open(file, file_path, FSAM_READ, FSOM_OPEN_EXISTING))
+    {
+        storage_file_free(file);
+        furi_record_close(RECORD_STORAGE);
+        FURI_LOG_E(HTTP_TAG, "Failed to open file for reading: %s", file_path);
+        return NULL;
+    }
+
+    if (memmgr_get_free_heap() < limit)
+    {
+        FURI_LOG_E(HTTP_TAG, "Not enough heap to read file.");
+        storage_file_close(file);
+        storage_file_free(file);
+        furi_record_close(RECORD_STORAGE);
+        return NULL;
+    }
+
+    // Allocate a buffer to hold the read data
+    uint8_t *buffer = (uint8_t *)malloc(limit);
+    if (!buffer)
+    {
+        FURI_LOG_E(HTTP_TAG, "Failed to allocate buffer");
+        storage_file_close(file);
+        storage_file_free(file);
+        furi_record_close(RECORD_STORAGE);
+        return NULL;
+    }
+
+    // Allocate a FuriString with preallocated capacity
+    FuriString *str_result = furi_string_alloc();
+    if (!str_result)
+    {
+        FURI_LOG_E(HTTP_TAG, "Failed to allocate FuriString");
+        free(buffer);
+        storage_file_close(file);
+        storage_file_free(file);
+        furi_record_close(RECORD_STORAGE);
+        return NULL;
+    }
+    furi_string_reserve(str_result, limit);
+
+    // Read data into the buffer
+    size_t read_count = storage_file_read(file, buffer, limit);
+    if (storage_file_get_error(file) != FSE_OK)
+    {
+        FURI_LOG_E(HTTP_TAG, "Error reading from file.");
+        furi_string_free(str_result);
+        free(buffer);
+        storage_file_close(file);
+        storage_file_free(file);
+        furi_record_close(RECORD_STORAGE);
+        return NULL;
+    }
+    if (read_count == 0)
+    {
+        FURI_LOG_E(HTTP_TAG, "No data read from file.");
+        furi_string_free(str_result);
+        free(buffer);
+        storage_file_close(file);
+        storage_file_free(file);
+        furi_record_close(RECORD_STORAGE);
+        return NULL;
+    }
+
+    // Append the entire buffer to FuriString in one operation
+    furi_string_cat_str(str_result, (char *)buffer);
+
+    // Clean up
+    storage_file_close(file);
+    storage_file_free(file);
+    furi_record_close(RECORD_STORAGE);
+    free(buffer);
+    return str_result;
+}
+
+/**
+ * @brief Perform a task while displaying a loading screen
+ * @param fhttp The FlipperHTTP context
+ * @param http_request The function to send the request
+ * @param parse_response The function to parse the response
+ * @param success_view_id The view ID to switch to on success
+ * @param failure_view_id The view ID to switch to on failure
+ * @param view_dispatcher The view dispatcher to use
+ * @return
+ */
+void flipper_http_loading_task(FlipperHTTP *fhttp,
+                               bool (*http_request)(void),
+                               bool (*parse_response)(void),
+                               uint32_t success_view_id,
+                               uint32_t failure_view_id,
+                               ViewDispatcher **view_dispatcher)
 {
     if (!fhttp)
     {
         FURI_LOG_E(HTTP_TAG, "Failed to get context.");
-        return false;
+        return;
     }
-    size_t data_length = strlen(data);
-    if (data_length == 0)
+    if (fhttp->state == INACTIVE)
     {
-        FURI_LOG_E("FlipperHTTP", "Attempted to send empty data.");
-        return false;
+        view_dispatcher_switch_to_view(*view_dispatcher, failure_view_id);
+        return;
     }
+    Loading *loading;
+    int32_t loading_view_id = 987654321; // Random ID
 
-    // Create a buffer with data + '\n'
-    size_t send_length = data_length + 1; // +1 for '\n'
-    if (send_length > 256)
-    { // Ensure buffer size is sufficient
-        FURI_LOG_E("FlipperHTTP", "Data too long to send over FHTTP->");
-        return false;
-    }
-
-    char send_buffer[257]; // 256 + 1 for safety
-    strncpy(send_buffer, data, 256);
-    send_buffer[data_length] = '\n';     // Append newline
-    send_buffer[data_length + 1] = '\0'; // Null-terminate
-
-    if (fhttp->state == INACTIVE && ((strstr(send_buffer, "[PING]") == NULL) &&
-                                     (strstr(send_buffer, "[WIFI/CONNECT]") == NULL)))
+    loading = loading_alloc();
+    if (!loading)
     {
-        FURI_LOG_E("FlipperHTTP", "Cannot send data while INACTIVE.");
-        fhttp->last_response = "Cannot send data while INACTIVE.";
-        return false;
+        FURI_LOG_E(HTTP_TAG, "Failed to allocate loading");
+        view_dispatcher_switch_to_view(*view_dispatcher, failure_view_id);
+
+        return;
     }
 
-    fhttp->state = SENDING;
-    furi_hal_serial_tx(fhttp->serial_handle, (const uint8_t *)send_buffer, send_length);
+    view_dispatcher_add_view(*view_dispatcher, loading_view_id, loading_get_view(loading));
 
-    // Uncomment below line to log the data sent over UART
-    // FURI_LOG_I("FlipperHTTP", "Sent data over UART: %s", send_buffer);
-    fhttp->state = IDLE;
-    return true;
+    // Switch to the loading view
+    view_dispatcher_switch_to_view(*view_dispatcher, loading_view_id);
+
+    // Make the request
+    if (!flipper_http_process_response_async(fhttp, http_request, parse_response))
+    {
+        FURI_LOG_E(HTTP_TAG, "Failed to make request");
+        view_dispatcher_switch_to_view(*view_dispatcher, failure_view_id);
+        view_dispatcher_remove_view(*view_dispatcher, loading_view_id);
+        loading_free(loading);
+
+        return;
+    }
+
+    // Switch to the success view
+    view_dispatcher_switch_to_view(*view_dispatcher, success_view_id);
+    view_dispatcher_remove_view(*view_dispatcher, loading_view_id);
+    loading_free(loading); // comment this out if you experience a freeze
 }
 
-// Function to send a PING request
-/**
- * @brief      Send a PING request to check if the Wifi Dev Board is connected.
- * @return     true if the request was successful, false otherwise.
- * @param fhttp The FlipperHTTP context
- * @note       The received data will be handled asynchronously via the callback.
- * @note       This is best used to check if the Wifi Dev Board is connected.
- * @note       The state will remain INACTIVE until a PONG is received.
- */
-bool flipper_http_ping(FlipperHTTP *fhttp)
-{
-    if (!fhttp)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to get context.");
-        return false;
-    }
-    const char *command = "[PING]";
-    if (!flipper_http_send_data(fhttp, command))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to send PING command.");
-        return false;
-    }
-    // set state as INACTIVE to be made IDLE if PONG is received
-    fhttp->state = INACTIVE;
-    // The response will be handled asynchronously via the callback
-    return true;
-}
-
-// Function to list available commands
-/**
- * @brief      Send a command to list available commands.
- * @return     true if the request was successful, false otherwise.
- * @param fhttp The FlipperHTTP context
- * @note       The received data will be handled asynchronously via the callback.
- */
-bool flipper_http_list_commands(FlipperHTTP *fhttp)
-{
-    if (!fhttp)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to get context.");
-        return false;
-    }
-    const char *command = "[LIST]";
-    if (!flipper_http_send_data(fhttp, command))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to send LIST command.");
-        return false;
-    }
-
-    // The response will be handled asynchronously via the callback
-    return true;
-}
-
-// Function to turn on the LED
-/**
- * @brief      Allow the LED to display while processing.
- * @return     true if the request was successful, false otherwise.
- * @param fhttp The FlipperHTTP context
- * @note       The received data will be handled asynchronously via the callback.
- */
-bool flipper_http_led_on(FlipperHTTP *fhttp)
-{
-    if (!fhttp)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to get context.");
-        return false;
-    }
-    const char *command = "[LED/ON]";
-    if (!flipper_http_send_data(fhttp, command))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to send LED ON command.");
-        return false;
-    }
-
-    // The response will be handled asynchronously via the callback
-    return true;
-}
-
-// Function to turn off the LED
-/**
- * @brief      Disable the LED from displaying while processing.
- * @return     true if the request was successful, false otherwise.
- * @param fhttp The FlipperHTTP context
- * @note       The received data will be handled asynchronously via the callback.
- */
-bool flipper_http_led_off(FlipperHTTP *fhttp)
-{
-    if (!fhttp)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to get context.");
-        return false;
-    }
-    const char *command = "[LED/OFF]";
-    if (!flipper_http_send_data(fhttp, command))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to send LED OFF command.");
-        return false;
-    }
-
-    // The response will be handled asynchronously via the callback
-    return true;
-}
-
-// Function to parse JSON data
 /**
  * @brief      Parse JSON data.
  * @return     true if the JSON data was parsed successfully, false otherwise.
- * @param fhttp The FlipperHTTP context
+ * @param      fhttp The FlipperHTTP context
  * @param      key       The key to parse from the JSON data.
  * @param      json_data The JSON data to parse.
  * @note       The received data will be handled asynchronously via the callback.
@@ -757,30 +681,23 @@ bool flipper_http_parse_json(FlipperHTTP *fhttp, const char *key, const char *js
         return false;
     }
 
-    char buffer[256];
+    char buffer[512];
     int ret =
         snprintf(buffer, sizeof(buffer), "[PARSE]{\"key\":\"%s\",\"json\":%s}", key, json_data);
+
     if (ret < 0 || ret >= (int)sizeof(buffer))
     {
         FURI_LOG_E("FlipperHTTP", "Failed to format JSON parse command.");
         return false;
     }
 
-    if (!flipper_http_send_data(fhttp, buffer))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to send JSON parse command.");
-        return false;
-    }
-
-    // The response will be handled asynchronously via the callback
-    return true;
+    return flipper_http_send_data(fhttp, buffer);
 }
 
-// Function to parse JSON array data
 /**
  * @brief      Parse JSON array data.
  * @return     true if the JSON array data was parsed successfully, false otherwise.
- * @param fhttp The FlipperHTTP context
+ * @param      fhttp The FlipperHTTP context
  * @param      key       The key to parse from the JSON array data.
  * @param      index     The index to parse from the JSON array data.
  * @param      json_data The JSON array data to parse.
@@ -799,7 +716,7 @@ bool flipper_http_parse_json_array(FlipperHTTP *fhttp, const char *key, int inde
         return false;
     }
 
-    char buffer[256];
+    char buffer[512];
     int ret = snprintf(
         buffer,
         sizeof(buffer),
@@ -807,48 +724,159 @@ bool flipper_http_parse_json_array(FlipperHTTP *fhttp, const char *key, int inde
         key,
         index,
         json_data);
+
     if (ret < 0 || ret >= (int)sizeof(buffer))
     {
         FURI_LOG_E("FlipperHTTP", "Failed to format JSON parse array command.");
         return false;
     }
 
-    if (!flipper_http_send_data(fhttp, buffer))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to send JSON parse array command.");
-        return false;
-    }
-
-    // The response will be handled asynchronously via the callback
-    return true;
+    return flipper_http_send_data(fhttp, buffer);
 }
 
-// Function to scan for WiFi networks
 /**
- * @brief      Send a command to scan for WiFi networks.
- * @return     true if the request was successful, false otherwise.
+ * @brief Process requests and parse JSON data asynchronously
  * @param fhttp The FlipperHTTP context
- * @note       The received data will be handled asynchronously via the callback.
+ * @param http_request The function to send the request
+ * @param parse_json The function to parse the JSON
+ * @return true if successful, false otherwise
  */
-bool flipper_http_scan_wifi(FlipperHTTP *fhttp)
+bool flipper_http_process_response_async(FlipperHTTP *fhttp, bool (*http_request)(void), bool (*parse_json)(void))
 {
     if (!fhttp)
     {
         FURI_LOG_E(HTTP_TAG, "Failed to get context.");
         return false;
     }
-    const char *command = "[WIFI/SCAN]";
-    if (!flipper_http_send_data(fhttp, command))
+    if (http_request()) // start the async request
     {
-        FURI_LOG_E("FlipperHTTP", "Failed to send WiFi scan command.");
+        furi_timer_start(fhttp->get_timeout_timer, TIMEOUT_DURATION_TICKS);
+        fhttp->state = RECEIVING;
+    }
+    else
+    {
+        FURI_LOG_E(HTTP_TAG, "Failed to send request");
         return false;
     }
-
-    // The response will be handled asynchronously via the callback
+    while (fhttp->state == RECEIVING && furi_timer_is_running(fhttp->get_timeout_timer) > 0)
+    {
+        // Wait for the request to be received
+        furi_delay_ms(100);
+    }
+    furi_timer_stop(fhttp->get_timeout_timer);
+    if (!parse_json()) // parse the JSON before switching to the view (synchonous)
+    {
+        FURI_LOG_E(HTTP_TAG, "Failed to parse the JSON...");
+        return false;
+    }
     return true;
 }
 
-// Function to save WiFi settings (returns true if successful)
+/**
+ * @brief      Send a request to the specified URL.
+ * @return     true if the request was successful, false otherwise.
+ * @param      fhttp The FlipperHTTP context
+ * @param      method The HTTP method to use.
+ * @param      url  The URL to send the request to.
+ * @param      headers  The headers to send with the request.
+ * @param      payload  The data to send with the request.
+ * @note       The received data will be handled asynchronously via the callback.
+ */
+bool flipper_http_request(FlipperHTTP *fhttp, HTTPMethod method, const char *url, const char *headers, const char *payload)
+{
+    if (!fhttp)
+    {
+        FURI_LOG_E("FlipperHTTP", "Failed to get context.");
+        return false;
+    }
+    if (!url)
+    {
+        FURI_LOG_E("FlipperHTTP", "Invalid arguments provided to flipper_http_request.");
+        return false;
+    }
+
+    // Prepare request command
+    char command[512];
+    int ret = 0;
+
+    switch (method)
+    {
+    case GET:
+        if (headers && strlen(headers) > 0)
+            ret = snprintf(command, sizeof(command), "[GET/HTTP]{\"url\":\"%s\",\"headers\":%s}", url, headers);
+        else
+            ret = snprintf(command, sizeof(command), "[GET]%s", url);
+        break;
+    case POST:
+        if (!headers || !payload)
+        {
+            FURI_LOG_E("FlipperHTTP", "Invalid arguments provided to flipper_http_request.");
+            return false;
+        }
+        ret = snprintf(command, sizeof(command), "[POST/HTTP]{\"url\":\"%s\",\"headers\":%s,\"payload\":%s}", url, headers, payload);
+        break;
+    case PUT:
+        if (!headers || !payload)
+        {
+            FURI_LOG_E("FlipperHTTP", "Invalid arguments provided to flipper_http_request.");
+            return false;
+        }
+        ret = snprintf(command, sizeof(command), "[PUT/HTTP]{\"url\":\"%s\",\"headers\":%s,\"payload\":%s}", url, headers, payload);
+        break;
+    case DELETE:
+        if (!headers || !payload)
+        {
+            FURI_LOG_E("FlipperHTTP", "Invalid arguments provided to flipper_http_request.");
+            return false;
+        }
+        ret = snprintf(command, sizeof(command), "[DELETE/HTTP]{\"url\":\"%s\",\"headers\":%s,\"payload\":%s}", url, headers, payload);
+        break;
+    case BYTES:
+        if (!headers)
+        {
+            FURI_LOG_E("FlipperHTTP", "Invalid arguments provided to flipper_http_request.");
+            return false;
+        }
+        if (strlen(fhttp->file_path) == 0)
+        {
+            FURI_LOG_E("FlipperHTTP", "File path is not set.");
+            return false;
+        }
+        fhttp->save_received_data = false;
+        fhttp->is_bytes_request = true;
+        ret = snprintf(command, sizeof(command), "[GET/BYTES]{\"url\":\"%s\",\"headers\":%s}", url, headers);
+        break;
+    case BYTES_POST:
+        if (!headers || !payload)
+        {
+            FURI_LOG_E("FlipperHTTP", "Invalid arguments provided to flipper_http_request.");
+            return false;
+        }
+        if (strlen(fhttp->file_path) == 0)
+        {
+            FURI_LOG_E("FlipperHTTP", "File path is not set.");
+            return false;
+        }
+        fhttp->save_received_data = false;
+        fhttp->is_bytes_request = true;
+        ret = snprintf(command, sizeof(command), "[POST/BYTES]{\"url\":\"%s\",\"headers\":%s,\"payload\":%s}", url, headers, payload);
+        break;
+    }
+
+    // check if ret is valid
+    if (ret < 0 || ret >= (int)sizeof(command))
+    {
+        FURI_LOG_E("FlipperHTTP", "Failed to format request command.");
+        return false;
+    }
+
+    // set method
+    fhttp->method = method;
+
+    // Send request via UART
+    return flipper_http_send_data(fhttp, command);
+}
+
 /**
  * @brief      Send a command to save WiFi settings.
  * @return     true if the request was successful, false otherwise.
@@ -867,523 +895,111 @@ bool flipper_http_save_wifi(FlipperHTTP *fhttp, const char *ssid, const char *pa
         FURI_LOG_E("FlipperHTTP", "Invalid arguments provided to flipper_http_save_wifi.");
         return false;
     }
+
     char buffer[256];
+
     int ret = snprintf(
         buffer, sizeof(buffer), "[WIFI/SAVE]{\"ssid\":\"%s\",\"password\":\"%s\"}", ssid, password);
+
     if (ret < 0 || ret >= (int)sizeof(buffer))
     {
         FURI_LOG_E("FlipperHTTP", "Failed to format WiFi save command.");
         return false;
     }
 
-    if (!flipper_http_send_data(fhttp, buffer))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to send WiFi save command.");
-        return false;
-    }
-
-    // The response will be handled asynchronously via the callback
-    return true;
+    return flipper_http_send_data(fhttp, buffer);
 }
 
-// Function to get IP address of WiFi Devboard
 /**
- * @brief      Send a command to get the IP address of the WiFi Devboard
+ * @brief      Send a command.
  * @return     true if the request was successful, false otherwise.
- * @param fhttp The FlipperHTTP context
+ * @param      fhttp The FlipperHTTP context
+ * @param      command The command to send.
  * @note       The received data will be handled asynchronously via the callback.
  */
-bool flipper_http_ip_address(FlipperHTTP *fhttp)
+bool flipper_http_send_command(FlipperHTTP *fhttp, HTTPCommand command)
 {
     if (!fhttp)
     {
         FURI_LOG_E(HTTP_TAG, "Failed to get context.");
         return false;
     }
-    const char *command = "[IP/ADDRESS]";
-    if (!flipper_http_send_data(fhttp, command))
+    switch (command)
     {
-        FURI_LOG_E("FlipperHTTP", "Failed to send IP address command.");
+    case HTTP_CMD_WIFI_CONNECT:
+        return flipper_http_send_data(fhttp, "[WIFI/CONNECT]");
+    case HTTP_CMD_WIFI_DISCONNECT:
+        return flipper_http_send_data(fhttp, "[WIFI/DISCONNECT]");
+    case HTTP_CMD_IP_ADDRESS:
+        return flipper_http_send_data(fhttp, "[IP/ADDRESS]");
+    case HTTP_CMD_IP_WIFI:
+        return flipper_http_send_data(fhttp, "[WIFI/IP]");
+    case HTTP_CMD_SCAN:
+        return flipper_http_send_data(fhttp, "[WIFI/SCAN]");
+    case HTTP_CMD_LIST_COMMANDS:
+        return flipper_http_send_data(fhttp, "[LIST]");
+    case HTTP_CMD_LED_ON:
+        return flipper_http_send_data(fhttp, "[LED/ON]");
+    case HTTP_CMD_LED_OFF:
+        return flipper_http_send_data(fhttp, "[LED/OFF]");
+    case HTTP_CMD_PING:
+        fhttp->state = INACTIVE; // set state as INACTIVE to be made IDLE if PONG is received
+        return flipper_http_send_data(fhttp, "[PING]");
+    default:
+        FURI_LOG_E(HTTP_TAG, "Invalid command.");
         return false;
     }
-
-    // The response will be handled asynchronously via the callback
-    return true;
 }
 
-// Function to get IP address of the connected WiFi network
 /**
- * @brief      Send a command to get the IP address of the connected WiFi network.
- * @return     true if the request was successful, false otherwise.
+ * @brief      Send data over UART with newline termination.
+ * @return     true if the data was sent successfully, false otherwise.
  * @param fhttp The FlipperHTTP context
- * @note       The received data will be handled asynchronously via the callback.
+ * @param      data  The data to send over UART.
+ * @note       The data will be sent over UART with a newline character appended.
  */
-bool flipper_http_ip_wifi(FlipperHTTP *fhttp)
+bool flipper_http_send_data(FlipperHTTP *fhttp, const char *data)
 {
     if (!fhttp)
     {
         FURI_LOG_E(HTTP_TAG, "Failed to get context.");
         return false;
     }
-    const char *command = "[WIFI/IP]";
-    if (!flipper_http_send_data(fhttp, command))
+
+    size_t data_length = strlen(data);
+    if (data_length == 0)
     {
-        FURI_LOG_E("FlipperHTTP", "Failed to send WiFi IP command.");
+        FURI_LOG_E("FlipperHTTP", "Attempted to send empty data.");
         return false;
     }
 
-    // The response will be handled asynchronously via the callback
+    // Create a buffer with data + '\n'
+    size_t send_length = data_length + 1; // +1 for '\n'
+    if (send_length > 512)
+    { // Ensure buffer size is sufficient
+        FURI_LOG_E("FlipperHTTP", "Data too long to send over FHTTP->");
+        return false;
+    }
+
+    char send_buffer[513]; // 512 + 1 for safety
+    strncpy(send_buffer, data, 512);
+    send_buffer[data_length] = '\n';     // Append newline
+    send_buffer[data_length + 1] = '\0'; // Null-terminate
+
+    if (fhttp->state == INACTIVE && ((strstr(send_buffer, "[PING]") == NULL) &&
+                                     (strstr(send_buffer, "[WIFI/CONNECT]") == NULL)))
+    {
+        FURI_LOG_E("FlipperHTTP", "Cannot send data while INACTIVE.");
+        fhttp->last_response = "Cannot send data while INACTIVE.";
+        return false;
+    }
+
+    fhttp->state = SENDING;
+    furi_hal_serial_tx(fhttp->serial_handle, (const uint8_t *)send_buffer, send_length);
+
+    // FURI_LOG_I("FlipperHTTP", "Sent data over UART: %s", send_buffer);
+    fhttp->state = IDLE;
     return true;
-}
-
-// Function to disconnect from WiFi (returns true if successful)
-/**
- * @brief      Send a command to disconnect from WiFi.
- * @return     true if the request was successful, false otherwise.
- * @param fhttp The FlipperHTTP context
- * @note       The received data will be handled asynchronously via the callback.
- */
-bool flipper_http_disconnect_wifi(FlipperHTTP *fhttp)
-{
-    if (!fhttp)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to get context.");
-        return false;
-    }
-    const char *command = "[WIFI/DISCONNECT]";
-    if (!flipper_http_send_data(fhttp, command))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to send WiFi disconnect command.");
-        return false;
-    }
-
-    // The response will be handled asynchronously via the callback
-    return true;
-}
-
-// Function to connect to WiFi (returns true if successful)
-/**
- * @brief      Send a command to connect to WiFi.
- * @return     true if the request was successful, false otherwise.
- * @param fhttp The FlipperHTTP context
- * @note       The received data will be handled asynchronously via the callback.
- */
-bool flipper_http_connect_wifi(FlipperHTTP *fhttp)
-{
-    if (!fhttp)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to get context.");
-        return false;
-    }
-    const char *command = "[WIFI/CONNECT]";
-    if (!flipper_http_send_data(fhttp, command))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to send WiFi connect command.");
-        return false;
-    }
-
-    // The response will be handled asynchronously via the callback
-    return true;
-}
-
-// Function to send a GET request
-/**
- * @brief      Send a GET request to the specified URL.
- * @return     true if the request was successful, false otherwise.
- * @param fhttp The FlipperHTTP context
- * @param      url  The URL to send the GET request to.
- * @note       The received data will be handled asynchronously via the callback.
- */
-bool flipper_http_get_request(FlipperHTTP *fhttp, const char *url)
-{
-    if (!fhttp)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to get context.");
-        return false;
-    }
-    if (!url)
-    {
-        FURI_LOG_E("FlipperHTTP", "Invalid arguments provided to flipper_http_get_request.");
-        return false;
-    }
-
-    // Prepare GET request command
-    char command[256];
-    int ret = snprintf(command, sizeof(command), "[GET]%s", url);
-    if (ret < 0 || ret >= (int)sizeof(command))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to format GET request command.");
-        return false;
-    }
-
-    // Send GET request via UART
-    if (!flipper_http_send_data(fhttp, command))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to send GET request command.");
-        return false;
-    }
-
-    // set method
-    fhttp->method = GET;
-
-    // The response will be handled asynchronously via the callback
-    return true;
-}
-
-// Function to send a GET request with headers
-/**
- * @brief      Send a GET request to the specified URL.
- * @return     true if the request was successful, false otherwise.
- * @param fhttp The FlipperHTTP context
- * @param      url  The URL to send the GET request to.
- * @param      headers  The headers to send with the GET request.
- * @note       The received data will be handled asynchronously via the callback.
- */
-bool flipper_http_get_request_with_headers(FlipperHTTP *fhttp, const char *url, const char *headers)
-{
-    if (!fhttp)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to get context.");
-        return false;
-    }
-    if (!url || !headers)
-    {
-        FURI_LOG_E(
-            "FlipperHTTP", "Invalid arguments provided to flipper_http_get_request_with_headers.");
-        return false;
-    }
-
-    // Prepare GET request command with headers
-    char command[256];
-    int ret = snprintf(
-        command, sizeof(command), "[GET/HTTP]{\"url\":\"%s\",\"headers\":%s}", url, headers);
-    if (ret < 0 || ret >= (int)sizeof(command))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to format GET request command with headers.");
-        return false;
-    }
-
-    // Send GET request via UART
-    if (!flipper_http_send_data(fhttp, command))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to send GET request command with headers.");
-        return false;
-    }
-
-    // set method
-    fhttp->method = GET;
-
-    // The response will be handled asynchronously via the callback
-    return true;
-}
-
-// Function to send a GET request with headers and return bytes
-/**
- * @brief      Send a GET request to the specified URL.
- * @return     true if the request was successful, false otherwise.
- * @param fhttp The FlipperHTTP context
- * @param      url  The URL to send the GET request to.
- * @param      headers  The headers to send with the GET request.
- * @note       The received data will be handled asynchronously via the callback.
- */
-bool flipper_http_get_request_bytes(FlipperHTTP *fhttp, const char *url, const char *headers)
-{
-    if (!fhttp)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to get context.");
-        return false;
-    }
-    if (!url || !headers)
-    {
-        FURI_LOG_E("FlipperHTTP", "Invalid arguments provided to flipper_http_get_request_bytes.");
-        return false;
-    }
-
-    // Prepare GET request command with headers
-    char command[256];
-    int ret = snprintf(
-        command, sizeof(command), "[GET/BYTES]{\"url\":\"%s\",\"headers\":%s}", url, headers);
-    if (ret < 0 || ret >= (int)sizeof(command))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to format GET request command with headers.");
-        return false;
-    }
-
-    // Send GET request via UART
-    if (!flipper_http_send_data(fhttp, command))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to send GET request command with headers.");
-        return false;
-    }
-
-    // set method
-    fhttp->method = BYTES;
-
-    // The response will be handled asynchronously via the callback
-    return true;
-}
-
-// Function to send a POST request with headers
-/**
- * @brief      Send a POST request to the specified URL.
- * @return     true if the request was successful, false otherwise.
- * @param fhttp The FlipperHTTP context
- * @param      url  The URL to send the POST request to.
- * @param      headers  The headers to send with the POST request.
- * @param      data  The data to send with the POST request.
- * @note       The received data will be handled asynchronously via the callback.
- */
-bool flipper_http_post_request_with_headers(
-    FlipperHTTP *fhttp,
-    const char *url,
-    const char *headers,
-    const char *payload)
-{
-    if (!fhttp)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to get context.");
-        return false;
-    }
-    if (!url || !headers || !payload)
-    {
-        FURI_LOG_E(
-            "FlipperHTTP",
-            "Invalid arguments provided to flipper_http_post_request_with_headers.");
-        return false;
-    }
-
-    // Prepare POST request command with headers and data
-    char command[256];
-    int ret = snprintf(
-        command,
-        sizeof(command),
-        "[POST/HTTP]{\"url\":\"%s\",\"headers\":%s,\"payload\":%s}",
-        url,
-        headers,
-        payload);
-    if (ret < 0 || ret >= (int)sizeof(command))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to format POST request command with headers and data.");
-        return false;
-    }
-
-    // Send POST request via UART
-    if (!flipper_http_send_data(fhttp, command))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to send POST request command with headers and data.");
-        return false;
-    }
-
-    // set method
-    fhttp->method = POST;
-
-    // The response will be handled asynchronously via the callback
-    return true;
-}
-
-// Function to send a POST request with headers and return bytes
-/**
- * @brief      Send a POST request to the specified URL.
- * @return     true if the request was successful, false otherwise.
- * @param fhttp The FlipperHTTP context
- * @param      url  The URL to send the POST request to.
- * @param      headers  The headers to send with the POST request.
- * @param      payload  The data to send with the POST request.
- * @note       The received data will be handled asynchronously via the callback.
- */
-bool flipper_http_post_request_bytes(FlipperHTTP *fhttp, const char *url, const char *headers, const char *payload)
-{
-    if (!fhttp)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to get context.");
-        return false;
-    }
-    if (!url || !headers || !payload)
-    {
-        FURI_LOG_E(
-            "FlipperHTTP", "Invalid arguments provided to flipper_http_post_request_bytes.");
-        return false;
-    }
-
-    // Prepare POST request command with headers and data
-    char command[256];
-    int ret = snprintf(
-        command,
-        sizeof(command),
-        "[POST/BYTES]{\"url\":\"%s\",\"headers\":%s,\"payload\":%s}",
-        url,
-        headers,
-        payload);
-    if (ret < 0 || ret >= (int)sizeof(command))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to format POST request command with headers and data.");
-        return false;
-    }
-
-    // Send POST request via UART
-    if (!flipper_http_send_data(fhttp, command))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to send POST request command with headers and data.");
-        return false;
-    }
-
-    // set method
-    fhttp->method = BYTES;
-
-    // The response will be handled asynchronously via the callback
-    return true;
-}
-
-// Function to send a PUT request with headers
-/**
- * @brief      Send a PUT request to the specified URL.
- * @return     true if the request was successful, false otherwise.
- * @param fhttp The FlipperHTTP context
- * @param      url  The URL to send the PUT request to.
- * @param      headers  The headers to send with the PUT request.
- * @param      data  The data to send with the PUT request.
- * @note       The received data will be handled asynchronously via the callback.
- */
-bool flipper_http_put_request_with_headers(
-    FlipperHTTP *fhttp,
-    const char *url,
-    const char *headers,
-    const char *payload)
-{
-    if (!fhttp)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to get context.");
-        return false;
-    }
-    if (!url || !headers || !payload)
-    {
-        FURI_LOG_E(
-            "FlipperHTTP", "Invalid arguments provided to flipper_http_put_request_with_headers.");
-        return false;
-    }
-
-    // Prepare PUT request command with headers and data
-    char command[256];
-    int ret = snprintf(
-        command,
-        sizeof(command),
-        "[PUT/HTTP]{\"url\":\"%s\",\"headers\":%s,\"payload\":%s}",
-        url,
-        headers,
-        payload);
-    if (ret < 0 || ret >= (int)sizeof(command))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to format PUT request command with headers and data.");
-        return false;
-    }
-
-    // Send PUT request via UART
-    if (!flipper_http_send_data(fhttp, command))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to send PUT request command with headers and data.");
-        return false;
-    }
-
-    // set method
-    fhttp->method = PUT;
-
-    // The response will be handled asynchronously via the callback
-    return true;
-}
-
-// Function to send a DELETE request with headers
-/**
- * @brief      Send a DELETE request to the specified URL.
- * @return     true if the request was successful, false otherwise.
- * @param fhttp The FlipperHTTP context
- * @param      url  The URL to send the DELETE request to.
- * @param      headers  The headers to send with the DELETE request.
- * @param      data  The data to send with the DELETE request.
- * @note       The received data will be handled asynchronously via the callback.
- */
-bool flipper_http_delete_request_with_headers(
-    FlipperHTTP *fhttp,
-    const char *url,
-    const char *headers,
-    const char *payload)
-{
-    if (!fhttp)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to get context.");
-        return false;
-    }
-    if (!url || !headers || !payload)
-    {
-        FURI_LOG_E(
-            "FlipperHTTP",
-            "Invalid arguments provided to flipper_http_delete_request_with_headers.");
-        return false;
-    }
-
-    // Prepare DELETE request command with headers and data
-    char command[256];
-    int ret = snprintf(
-        command,
-        sizeof(command),
-        "[DELETE/HTTP]{\"url\":\"%s\",\"headers\":%s,\"payload\":%s}",
-        url,
-        headers,
-        payload);
-    if (ret < 0 || ret >= (int)sizeof(command))
-    {
-        FURI_LOG_E(
-            "FlipperHTTP", "Failed to format DELETE request command with headers and data.");
-        return false;
-    }
-
-    // Send DELETE request via UART
-    if (!flipper_http_send_data(fhttp, command))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to send DELETE request command with headers and data.");
-        return false;
-    }
-
-    // set method
-    fhttp->method = DELETE;
-
-    // The response will be handled asynchronously via the callback
-    return true;
-}
-// Function to trim leading and trailing spaces and newlines from a constant string
-static char *trim(const char *str)
-{
-    const char *end;
-    char *trimmed_str;
-    size_t len;
-
-    // Trim leading space
-    while (isspace((unsigned char)*str))
-        str++;
-
-    // All spaces?
-    if (*str == 0)
-        return strdup(""); // Return an empty string if all spaces
-
-    // Trim trailing space
-    end = str + strlen(str) - 1;
-    while (end > str && isspace((unsigned char)*end))
-        end--;
-
-    // Set length for the trimmed string
-    len = end - str + 1;
-
-    // Allocate space for the trimmed string and null terminator
-    trimmed_str = (char *)malloc(len + 1);
-    if (trimmed_str == NULL)
-    {
-        return NULL; // Handle memory allocation failure
-    }
-
-    // Copy the trimmed part of the string into trimmed_str
-    strncpy(trimmed_str, str, len);
-    trimmed_str[len] = '\0'; // Null terminate the string
-
-    return trimmed_str;
 }
 
 // Function to set content length and status code
@@ -1461,7 +1077,44 @@ static void set_header(FlipperHTTP *fhttp)
     // free the furi_string
     furi_string_free(furi_string);
 }
-// Function to handle received data asynchronously
+
+// Function to trim leading and trailing spaces and newlines from a constant string
+static char *trim(const char *str)
+{
+    const char *end;
+    char *trimmed_str;
+    size_t len;
+
+    // Trim leading space
+    while (isspace((unsigned char)*str))
+        str++;
+
+    // All spaces?
+    if (*str == 0)
+        return strdup(""); // Return an empty string if all spaces
+
+    // Trim trailing space
+    end = str + strlen(str) - 1;
+    while (end > str && isspace((unsigned char)*end))
+        end--;
+
+    // Set length for the trimmed string
+    len = end - str + 1;
+
+    // Allocate space for the trimmed string and null terminator
+    trimmed_str = (char *)malloc(len + 1);
+    if (trimmed_str == NULL)
+    {
+        return NULL; // Handle memory allocation failure
+    }
+
+    // Copy the trimmed part of the string into trimmed_str
+    strncpy(trimmed_str, str, len);
+    trimmed_str[len] = '\0'; // Null terminate the string
+
+    return trimmed_str;
+}
+
 /**
  * @brief      Callback function to handle received data asynchronously.
  * @return     void
@@ -1469,7 +1122,7 @@ static void set_header(FlipperHTTP *fhttp)
  * @param      context  The FlipperHTTP context.
  * @note       The received data will be handled asynchronously via the callback and handles the state of the UART.
  */
-void flipper_http_rx_callback(const char *line, void *context)
+static void flipper_http_rx_callback(const char *line, void *context)
 {
     FlipperHTTP *fhttp = (FlipperHTTP *)context;
     if (!fhttp)
@@ -1507,7 +1160,7 @@ void flipper_http_rx_callback(const char *line, void *context)
     // FURI_LOG_I(HTTP_TAG, "Received UART line: %s", line);
 
     // Check if we've started receiving data from a GET request
-    if (fhttp->started_receiving && fhttp->method == GET)
+    if (fhttp->started_receiving && (fhttp->method == GET || fhttp->method == BYTES))
     {
         // Restart the timeout timer each time new data is received
         furi_timer_restart(fhttp->get_timeout_timer, TIMEOUT_DURATION_TICKS);
@@ -1577,7 +1230,7 @@ void flipper_http_rx_callback(const char *line, void *context)
     }
 
     // Check if we've started receiving data from a POST request
-    else if (fhttp->started_receiving && fhttp->method == POST)
+    else if (fhttp->started_receiving && (fhttp->method == POST || fhttp->method == BYTES_POST))
     {
         // Restart the timeout timer each time new data is received
         furi_timer_restart(fhttp->get_timeout_timer, TIMEOUT_DURATION_TICKS);
@@ -1833,106 +1486,6 @@ void flipper_http_rx_callback(const char *line, void *context)
 }
 
 /**
- * @brief Process requests and parse JSON data asynchronously
- * @param fhttp The FlipperHTTP context
- * @param http_request The function to send the request
- * @param parse_json The function to parse the JSON
- * @return true if successful, false otherwise
- */
-bool flipper_http_process_response_async(FlipperHTTP *fhttp, bool (*http_request)(void), bool (*parse_json)(void))
-{
-    if (!fhttp)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to get context.");
-        return false;
-    }
-    if (http_request()) // start the async request
-    {
-        furi_timer_start(fhttp->get_timeout_timer, TIMEOUT_DURATION_TICKS);
-        fhttp->state = RECEIVING;
-    }
-    else
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to send request");
-        return false;
-    }
-    while (fhttp->state == RECEIVING && furi_timer_is_running(fhttp->get_timeout_timer) > 0)
-    {
-        // Wait for the request to be received
-        furi_delay_ms(100);
-    }
-    furi_timer_stop(fhttp->get_timeout_timer);
-    if (!parse_json()) // parse the JSON before switching to the view (synchonous)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to parse the JSON...");
-        return false;
-    }
-    return true;
-}
-
-/**
- * @brief Perform a task while displaying a loading screen
- * @param fhttp The FlipperHTTP context
- * @param http_request The function to send the request
- * @param parse_response The function to parse the response
- * @param success_view_id The view ID to switch to on success
- * @param failure_view_id The view ID to switch to on failure
- * @param view_dispatcher The view dispatcher to use
- * @return
- */
-void flipper_http_loading_task(FlipperHTTP *fhttp,
-                               bool (*http_request)(void),
-                               bool (*parse_response)(void),
-                               uint32_t success_view_id,
-                               uint32_t failure_view_id,
-                               ViewDispatcher **view_dispatcher)
-{
-    if (!fhttp)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to get context.");
-        return;
-    }
-    if (fhttp->state == INACTIVE)
-    {
-        view_dispatcher_switch_to_view(*view_dispatcher, failure_view_id);
-        return;
-    }
-    Loading *loading;
-    int32_t loading_view_id = 987654321; // Random ID
-
-    loading = loading_alloc();
-    if (!loading)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to allocate loading");
-        view_dispatcher_switch_to_view(*view_dispatcher, failure_view_id);
-
-        return;
-    }
-
-    view_dispatcher_add_view(*view_dispatcher, loading_view_id, loading_get_view(loading));
-
-    // Switch to the loading view
-    view_dispatcher_switch_to_view(*view_dispatcher, loading_view_id);
-
-    // Make the request
-    if (!flipper_http_process_response_async(fhttp, http_request, parse_response))
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to make request");
-        view_dispatcher_switch_to_view(*view_dispatcher, failure_view_id);
-        view_dispatcher_remove_view(*view_dispatcher, loading_view_id);
-        loading_free(loading);
-
-        return;
-    }
-
-    // Switch to the success view
-    view_dispatcher_switch_to_view(*view_dispatcher, success_view_id);
-    view_dispatcher_remove_view(*view_dispatcher, loading_view_id);
-    loading_free(loading); // comment this out if you experience a freeze
-}
-
-// Function to start a WebSocket connection
-/**
  * @brief      Send a request to the specified URL to start a WebSocket connection.
  * @return     true if the request was successful, false otherwise.
  * @param fhttp The FlipperHTTP context
@@ -1955,7 +1508,7 @@ bool flipper_http_websocket_start(FlipperHTTP *fhttp, const char *url, uint16_t 
     }
 
     // Prepare WebSocket request command with headers
-    char command[256];
+    char command[512];
     int ret = snprintf(
         command,
         sizeof(command),
@@ -1963,6 +1516,7 @@ bool flipper_http_websocket_start(FlipperHTTP *fhttp, const char *url, uint16_t 
         url,
         port,
         headers);
+
     if (ret < 0 || ret >= (int)sizeof(command))
     {
         FURI_LOG_E("FlipperHTTP", "Failed to format WebSocket start command with headers.");
@@ -1970,17 +1524,9 @@ bool flipper_http_websocket_start(FlipperHTTP *fhttp, const char *url, uint16_t 
     }
 
     // Send WebSocket request via UART
-    if (!flipper_http_send_data(fhttp, command))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to send WebSocket start command with headers.");
-        return false;
-    }
-
-    // The response will be handled asynchronously via the callback
-    return true;
+    return flipper_http_send_data(fhttp, command);
 }
 
-// Function to stop a WebSocket connection
 /**
  * @brief      Send a request to stop the WebSocket connection.
  * @return     true if the request was successful, false otherwise.
@@ -1994,13 +1540,5 @@ bool flipper_http_websocket_stop(FlipperHTTP *fhttp)
         FURI_LOG_E(HTTP_TAG, "Failed to get context.");
         return false;
     }
-
-    if (!flipper_http_send_data(fhttp, "[SOCKET/STOP]"))
-    {
-        FURI_LOG_E("FlipperHTTP", "Failed to send WebSocket stop command.");
-        return false;
-    }
-
-    // The response will be handled asynchronously via the callback
-    return true;
+    return flipper_http_send_data(fhttp, "[SOCKET/STOP]");
 }
