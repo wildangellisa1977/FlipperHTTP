@@ -20,3 +20,6 @@
 17. Lastly, on the Developer Board, press the RESET button once.
 
 You are all set. Here's a video tutorial: https://www.youtube.com/watch?v=AZfbrLKJMpM
+
+
+2025 Video Tutorial: https://www.youtube.com/watch?v=CoyFrUzKHhI
