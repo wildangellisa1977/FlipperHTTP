@@ -1,23 +1,13 @@
-/* FlipperHTTP.cpp for flipper-http.ino and FlipperHTTPh.h
+/* FlipperHTTP.cpp for flipper-http.ino and FlipperHTTP.h
 Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over tthis->uart.
 Created: 2024-09-30
-Updated: 2025-02-22
+Updated: 2025-03-11
 */
 
 #include "FlipperHTTP.h"
-#include "boards.h"
-
-#ifdef BOARD_PICO_W
-#include <LittleFS.h>
-#elif BOARD_PICO_2W
-#include <LittleFS.h>
-#elif BOARD_VGM
-#include <LittleFS.h>
-#else
-#include <SPIFFS.h>
-#endif
+#include "storage.h"
 
 // Clear serial buffer to avoid any residual data
 void FlipperHTTP::clearSerialBuffer()
@@ -28,13 +18,17 @@ void FlipperHTTP::clearSerialBuffer()
 //  Connect to Wifi using the loaded SSID and Password
 bool FlipperHTTP::connectToWifi()
 {
-    if (String(loadedSSID) == "" || String(loadedPassword) == "")
+    if (strlen(loadedSSID) == 0 || strlen(loadedPassword) == 0)
     {
         this->uart.println(F("[ERROR] WiFi SSID or Password is empty."));
         return false;
     }
 
+#ifndef BOARD_BW16
     WiFi.disconnect(true); // Ensure WiFi is disconnected before reconnecting
+#else
+    WiFi.disconnect();
+#endif
     WiFi.begin(loadedSSID, loadedPassword);
 #ifdef BOARD_ESP32_C3
     WiFi.setTxPower(WIFI_POWER_8_5dBm);
@@ -52,7 +46,9 @@ bool FlipperHTTP::connectToWifi()
     if (this->isConnectedToWifi())
     {
         this->uart.println(F("[SUCCESS] Successfully connected to Wifi."));
+#ifndef BOARD_BW16
         configTime(0, 0, "pool.ntp.org", "time.nist.gov"); // get UTC time via NTP
+#endif
         return true;
     }
     else
@@ -65,24 +61,7 @@ bool FlipperHTTP::connectToWifi()
 // Load WiFi settings from SPIFFS and attempt to connect
 bool FlipperHTTP::loadWifiSettings()
 {
-#ifdef BOARD_PICO_W
-    File file = LittleFS.open(settingsFilePath, "r");
-#elif BOARD_PICO_2W
-    File file = LittleFS.open(settingsFilePath, "r");
-#elif BOARD_VGM
-    File file = LittleFS.open(settingsFilePath, "r");
-#else
-    File file = SPIFFS.open(settingsFilePath, FILE_READ);
-#endif
-    if (!file)
-    {
-        return false;
-    }
-
-    // Read the entire file content
-    String fileContent = file.readString();
-    file.close();
-
+    String fileContent = file_read(settingsFilePath);
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, fileContent);
 
@@ -97,10 +76,14 @@ bool FlipperHTTP::loadWifiSettings()
         const char *ssid = wifi["ssid"];
         const char *password = wifi["password"];
 
-        strlcpy(loadedSSID, ssid, sizeof(loadedSSID));
-        strlcpy(loadedPassword, password, sizeof(loadedPassword));
+        strncpy(loadedSSID, ssid, sizeof(loadedSSID));
+        strncpy(loadedPassword, password, sizeof(loadedPassword));
 
+#ifdef BOARD_BW16
+        WiFi.begin((char *)ssid, password);
+#else
         WiFi.begin(ssid, password);
+#endif
 
         int attempts = 0;
         while (!this->isConnectedToWifi() && attempts < 4) // 2 seconds total, 500ms delay each
@@ -111,7 +94,9 @@ bool FlipperHTTP::loadWifiSettings()
 
         if (this->isConnectedToWifi())
         {
+#ifndef BOARD_BW16
             configTime(0, 0, "pool.ntp.org", "time.nist.gov"); // get UTC time via NTP
+#endif
             return true;
         }
     }
@@ -119,6 +104,82 @@ bool FlipperHTTP::loadWifiSettings()
     return false;
 }
 
+#ifdef BOARD_BW16
+String FlipperHTTP::request(
+    const char *method,
+    String url,
+    String payload,
+    const char *headerKeys[],
+    const char *headerValues[],
+    int headerSize)
+{
+    String response = "";                             // Initialize response string
+    this->client.setRootCA((unsigned char *)root_ca); // Set root CA for SSL
+    int index = url.indexOf('/');                     // Find the first occurrence of '/'
+    String host = url.substring(0, index);            // Extract host
+    String path = url.substring(index);               // Extract path
+
+    char host_server[64];                                    // Buffer for host server
+    strncpy(host_server, host.c_str(), sizeof(host_server)); // Copy host to buffer
+
+    if (this->client.connect(host_server, 443)) // Connect to the server
+    {
+        // Make a HTTP request:
+        this->client.print(method);
+        this->client.print(" ");
+        this->client.print(path);
+        this->client.println(" HTTP/1.1");
+        this->client.print("Host: ");
+        this->client.println(host_server);
+
+        // Add custom headers if provided
+        for (int i = 0; i < headerSize; i++)
+        {
+            this->client.print(headerKeys[i]);
+            this->client.print(": ");
+            this->client.println(headerValues[i]);
+        }
+
+        // Add payload if provided
+        if (payload != "")
+        {
+            this->client.print("Content-Length: ");
+            this->client.println(payload.length());
+            this->client.println("Content-Type: application/json");
+        }
+
+        this->client.println("Connection: close");
+        this->client.println();
+
+        // Send the payload in the request body
+        if (payload != "")
+        {
+            this->client.println(payload);
+        }
+
+        // Wait for response
+        while (this->client.connected() || this->client.available())
+        {
+            if (this->client.available())
+            {
+                String line = this->client.readStringUntil('\n');
+                response += line + "\n";
+            }
+        }
+
+        this->client.stop();
+    }
+    else
+    {
+        this->uart.println(F("[ERROR] Unable to connect to the server."));
+    }
+
+    // Clear serial buffer to avoid any residual data
+    this->clearSerialBuffer();
+
+    return response;
+}
+#else
 String FlipperHTTP::request(
     const char *method,
     String url,
@@ -204,6 +265,7 @@ String FlipperHTTP::request(
 
     return response;
 }
+#endif
 
 // Save WiFi settings to storage
 bool FlipperHTTP::saveWifiSettings(String jsonData)
@@ -222,20 +284,7 @@ bool FlipperHTTP::saveWifiSettings(String jsonData)
 
     // Load existing settings if they exist
     JsonDocument existingDoc;
-#ifdef BOARD_PICO_W
-    File file = LittleFS.open(settingsFilePath, "r");
-#elif BOARD_PICO_2W
-    File file = LittleFS.open(settingsFilePath, "r");
-#elif BOARD_VGM
-    File file = LittleFS.open(settingsFilePath, "r");
-#else
-    File file = SPIFFS.open(settingsFilePath, FILE_READ);
-#endif
-    if (file)
-    {
-        deserializeJson(existingDoc, file);
-        file.close();
-    }
+    file_deserialize(existingDoc, settingsFilePath);
 
     // Check if SSID is already saved
     bool found = false;
@@ -252,28 +301,12 @@ bool FlipperHTTP::saveWifiSettings(String jsonData)
     if (!found)
     {
         JsonArray wifiList = existingDoc["wifi_list"].to<JsonArray>();
-        JsonObject newWifi = wifiList.createNestedObject();
+        JsonObject newWifi = wifiList.add<JsonObject>();
         newWifi["ssid"] = newSSID;
         newWifi["password"] = newPassword;
 
-// Save updated list to file
-#ifdef BOARD_PICO_W
-        file = LittleFS.open(settingsFilePath, "w");
-#elif BOARD_PICO_2W
-        file = LittleFS.open(settingsFilePath, "w");
-#elif BOARD_VGM
-        file = LittleFS.open(settingsFilePath, "w");
-#else
-        file = SPIFFS.open(settingsFilePath, FILE_WRITE);
-#endif
-        if (!file)
-        {
-            this->uart.println(F("[ERROR] Failed to open file for writing."));
-            return false;
-        }
-
-        serializeJson(existingDoc, file);
-        file.close();
+        // Save updated list to file
+        file_serialize(existingDoc, settingsFilePath);
     }
 
     this->uart.print(F("[SUCCESS] Settings saved."));
@@ -304,7 +337,7 @@ void FlipperHTTP::setup()
 #endif
     this->uart.begin(115200);
     this->uart.set_timeout(5000);
-#ifdef BOARD_PICO_W
+#if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W)
     if (!LittleFS.begin())
     {
         if (LittleFS.format())
@@ -321,24 +354,7 @@ void FlipperHTTP::setup()
             rp2040.reboot();
         }
     }
-#elif BOARD_PICO_2W
-    if (!LittleFS.begin())
-    {
-        if (LittleFS.format())
-        {
-            if (!LittleFS.begin())
-            {
-                this->uart.println(F("Failed to re-mount LittleFS after formatting."));
-                rp2040.reboot();
-            }
-        }
-        else
-        {
-            this->uart.println(F("File system formatting failed."));
-            rp2040.reboot();
-        }
-    }
-#elif BOARD_VGM
+#elif defined(BOARD_VGM)
     this->uart_2.set_pins(24, 21);
     this->uart_2.begin(115200);
     this->uart_2.set_timeout(5000);
@@ -359,6 +375,8 @@ void FlipperHTTP::setup()
         }
     }
     this->uart_2.flush();
+#elif defined(BOARD_BW16)
+    // skip for now
 #else
     // Initialize SPIFFS
     if (!SPIFFS.begin(true))
@@ -370,10 +388,31 @@ void FlipperHTTP::setup()
     this->useLED = true;
     this->led.start();
     this->loadWifiSettings();
+#ifndef BOARD_BW16
     this->client.setCACert(root_ca);
+#else
+    this->client.setRootCA((unsigned char *)root_ca);
+#endif
     this->uart.flush();
 }
 
+#ifdef BOARD_BW16
+bool FlipperHTTP::stream_bytes(const char *method, String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize)
+{
+    // Not implemented for BW16
+    this->uart.print(F("[ERROR] stream_bytes not implemented for BW16."));
+    this->uart.print(method);
+    this->uart.print(url);
+    this->uart.print(payload);
+    for (int i = 0; i < headerSize; i++)
+    {
+        this->uart.print(headerKeys[i]);
+        this->uart.print(headerValues[i]);
+    }
+    this->uart.println();
+    return false;
+}
+#else
 bool FlipperHTTP::stream_bytes(const char *method, String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize)
 {
     HTTPClient http;
@@ -403,16 +442,7 @@ bool FlipperHTTP::stream_bytes(const char *method, String url, String payload, c
 
             WiFiClient *stream = http.getStreamPtr();
 
-// Check available heap memory before starting
-#ifdef BOARD_PICO_W
-            size_t freeHeap = rp2040.getFreeHeap();
-#elif BOARD_PICO_2W
-            size_t freeHeap = rp2040.getFreeHeap();
-#elif BOARD_VGM
-            size_t freeHeap = rp2040.getFreeHeap();
-#else
-            size_t freeHeap = ESP.getFreeHeap();
-#endif
+            size_t freeHeap = free_heap();        // Check available heap memory before starting
             const size_t minHeapThreshold = 1024; // Minimum heap space to avoid overflow
             if (freeHeap < minHeapThreshold)
             {
@@ -451,16 +481,7 @@ bool FlipperHTTP::stream_bytes(const char *method, String url, String payload, c
                 }
                 delay(1); // Yield control to the system
             }
-
-#ifdef BOARD_PICO_W
-            freeHeap = rp2040.getFreeHeap();
-#elif BOARD_PICO_2W
-            freeHeap = rp2040.getFreeHeap();
-#elif BOARD_VGM
-            freeHeap = rp2040.getFreeHeap();
-#else
-            freeHeap = ESP.getFreeHeap();
-#endif
+            freeHeap = free_heap(); // Check available heap memory after processing
             if (freeHeap < minHeapThreshold)
             {
                 this->uart.println(F("[ERROR] Not enough memory to continue processing the response."));
@@ -510,16 +531,8 @@ bool FlipperHTTP::stream_bytes(const char *method, String url, String payload, c
 
                         WiFiClient *stream = http.getStreamPtr();
 
-// Check available heap memory before starting
-#ifdef BOARD_PICO_W
-                        size_t freeHeap = rp2040.getFreeHeap();
-#elif BOARD_PICO_2W
-                        size_t freeHeap = rp2040.getFreeHeap();
-#elif BOARD_VGM
-                        size_t freeHeap = rp2040.getFreeHeap();
-#else
-                        size_t freeHeap = ESP.getFreeHeap();
-#endif
+                        // Check available heap memory before starting
+                        size_t freeHeap = free_heap();
                         if (freeHeap < 1024)
                         {
                             this->uart.println(F("[ERROR] Not enough memory to start processing the response."));
@@ -559,15 +572,7 @@ bool FlipperHTTP::stream_bytes(const char *method, String url, String payload, c
                             delay(1); // Yield control to the system
                         }
 
-#ifdef BOARD_PICO_W
-                        freeHeap = rp2040.getFreeHeap();
-#elif BOARD_PICO_2W
-                        freeHeap = rp2040.getFreeHeap();
-#elif BOARD_VGM
-                        freeHeap = rp2040.getFreeHeap();
-#else
-                        freeHeap = ESP.getFreeHeap();
-#endif
+                        freeHeap = free_heap(); // Check available heap memory after processing
                         if (freeHeap < 1024)
                         {
                             this->uart.println(F("[ERROR] Not enough memory to continue processing the response."));
@@ -609,6 +614,7 @@ bool FlipperHTTP::stream_bytes(const char *method, String url, String payload, c
     }
     return false;
 }
+#endif
 
 bool FlipperHTTP::read_serial_settings(String receivedData, bool connectAfterSave)
 {
@@ -625,8 +631,8 @@ bool FlipperHTTP::read_serial_settings(String receivedData, bool connectAfterSav
     // Extract values from JSON
     if (doc.containsKey("ssid") && doc.containsKey("password"))
     {
-        strlcpy(loadedSSID, doc["ssid"], sizeof(loadedSSID));             // save ssid
-        strlcpy(loadedPassword, doc["password"], sizeof(loadedPassword)); // save password
+        strncpy(loadedSSID, doc["ssid"], sizeof(loadedSSID));             // save ssid
+        strncpy(loadedPassword, doc["password"], sizeof(loadedPassword)); // save password
     }
     else
     {
@@ -651,6 +657,22 @@ bool FlipperHTTP::read_serial_settings(String receivedData, bool connectAfterSav
 }
 
 // Upload bytes to server
+#ifdef BOARD_BW16
+bool FlipperHTTP::upload_bytes(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize)
+{
+    // Not implemented for BW16 yet
+    this->uart.print(F("[ERROR] upload_bytes not implemented for BW16."));
+    this->uart.print(url);
+    this->uart.print(payload);
+    for (int i = 0; i < headerSize; i++)
+    {
+        this->uart.print(headerKeys[i]);
+        this->uart.print(headerValues[i]);
+    }
+    this->uart.println();
+    return false;
+}
+#else
 bool FlipperHTTP::upload_bytes(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize)
 {
     HTTPClient http;
@@ -757,6 +779,7 @@ bool FlipperHTTP::upload_bytes(String url, String payload, const char *headerKey
     }
     return false;
 }
+#endif
 // Main loop for flipper-http.ino that handles all of the commands
 void FlipperHTTP::loop()
 {
@@ -794,7 +817,7 @@ void FlipperHTTP::loop()
     }
 #else
     // Check if there's incoming serial data
-    if (this->uart.available() > 0)
+    if (this->uart.available())
     {
         // Read the incoming serial data until newline
         String _data = this->uart.read_serial_line();
@@ -868,12 +891,10 @@ void FlipperHTTP::loop()
         else if (_data.startsWith("[REBOOT]"))
         {
             this->useLED = true;
-#ifdef BOARD_PICO_W
+#if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
             rp2040.reboot();
-#elif BOARD_PICO_2W
-            rp2040.reboot();
-#elif BOARD_VGM
-            rp2040.reboot();
+#elif defined(BOARD_BW16)
+            // not supported yet
 #else
             ESP.restart();
 #endif
@@ -887,25 +908,7 @@ void FlipperHTTP::loop()
         // Handle Wifi list command
         else if (_data.startsWith("[WIFI/LIST]"))
         {
-#ifdef BOARD_PICO_W
-            File file = LittleFS.open(settingsFilePath, "r");
-#elif BOARD_PICO_2W
-            File file = LittleFS.open(settingsFilePath, "r");
-#elif BOARD_VGM
-            File file = LittleFS.open(settingsFilePath, "r");
-#else
-            File file = SPIFFS.open(settingsFilePath, FILE_READ);
-#endif
-            if (!file)
-            {
-                this->uart.println(F("[ERROR] Failed to open file for reading."));
-                return;
-            }
-
-            // Read the entire file content
-            String fileContent = file.readString();
-            file.close();
-
+            String fileContent = file_read(settingsFilePath);
             this->uart.println(fileContent);
             this->uart.flush();
         }
@@ -950,7 +953,11 @@ void FlipperHTTP::loop()
         // Handle [WIFI/DISCONNECT] command
         else if (_data == "[WIFI/DISCONNECT]")
         {
+#ifndef BOARD_BW16
             WiFi.disconnect(true);
+#else
+            WiFi.disconnect();
+#endif
             this->uart.println(F("[DISCONNECTED] WiFi has been disconnected."));
         }
         // Handle [GET] command
@@ -1349,8 +1356,6 @@ void FlipperHTTP::loop()
             }
         }
         // Handle [PARSE] command
-        // the user will append the key to read from the json
-        // example: [PARSE]{"key":"name","json":{"name":"John Doe"}}
         else if (_data.startsWith("[PARSE]"))
         {
             // Extract the JSON by removing the command part
@@ -1387,11 +1392,6 @@ void FlipperHTTP::loop()
             }
         }
         // Handle [PARSE/ARRAY] command
-        // the user will append the key to read and the index of the array to get it's key from the json
-        // example: [PARSE/ARRAY]{"key":"name","index":"1","json":{"name":["John Doe","Jane Doe"]}}
-        // this would return Jane Doe
-        // and in this example it would return {"flavor": "red"}:
-        // example: [PARSE/ARRAY]{"key":"flavor","index":"1","json":{"name":[{"flavor": "blue"},{"flavor": "red"}]}}
         else if (_data.startsWith("[PARSE/ARRAY]"))
         {
             // Extract the JSON by removing the command part
@@ -1482,6 +1482,12 @@ void FlipperHTTP::loop()
 
             // Begin the WebSocket connection (performs the handshake)
             ws.begin();
+
+            // send headers
+            for (int i = 0; i < headerSize; i++)
+            {
+                ws.sendHeader(headerKeys[i], headerValues[i]);
+            }
 
             // Check if a message is available from the server:
             if (ws.parseMessage() > 0)
