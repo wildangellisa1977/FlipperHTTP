@@ -16,7 +16,7 @@ bool file_begin()
     }
     return true;
 #elif defined(BOARD_BW16)
-    // skip for now
+    // no begin needed
     return true;
 #else
     if (!SPIFFS.begin(true))
@@ -38,7 +38,12 @@ void file_deserialize(JsonDocument &doc, const char *filename)
     deserializeJson(doc, file);
     file.close();
 #else
-    // skip for now
+    /*We will keep all data at the same address and overwrite for now*/
+    int bw16_flash_address = sizeof(filename); // Location we want the data to be put.
+    char buffer[512];
+    FlashStorage.get(bw16_flash_address, buffer);
+    buffer[sizeof(buffer) - 1] = '\0'; // Null-terminate the string
+    deserializeJson(doc, buffer);
 #endif
 }
 
@@ -58,7 +63,9 @@ String file_read(const char *filename)
         file.close();
     }
 #else
-    // skip for now
+    /*We will keep all data at the same address and overwrite for now*/
+    int bw16_flash_address = sizeof(filename); // Location we want the data to be put.
+    FlashStorage.get(bw16_flash_address, fileContent);
 #endif
     return fileContent;
 }
@@ -77,7 +84,12 @@ void file_serialize(JsonDocument &doc, const char *filename)
         file.close();
     }
 #else
-    // skip for now
+    /*We will keep all data at the same address and overwrite for now*/
+    int bw16_flash_address = sizeof(filename); // Location we want the data to be put.
+    char buffer[512];
+    size_t len = serializeJson(doc, buffer, sizeof(buffer));
+    buffer[len] = '\0'; // Null-terminate the string
+    FlashStorage.put(bw16_flash_address, buffer);
 #endif
 }
 
@@ -96,7 +108,9 @@ bool file_write(const char *filename, const char *data)
         return true;
     }
 #else
-    // skip for now
+    /*We will keep all data at the same address and overwrite for now*/
+    int bw16_flash_address = sizeof(filename); // Location we want the data to be put.
+    FlashStorage.put(bw16_flash_address, data);
 #endif
     return false;
 }
