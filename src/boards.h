@@ -11,3 +11,4 @@
 // #define BOARD_PICO_2W 7      // Raspberry Pi Pico W
 // #define BOARD_VGM 8 // Raspberry Pi Pico
 // #define BOARD_ESP32_C3 9 // ESP32C3 Dev Module
+// #define BOARD_BW16 10 // AI-Thinker BW16 (RTL8720DN) need board manager: https://github.com/Ameba-AIoT/ameba-arduino-d/raw/dev/Arduino_package/package_realtek_amebad_early_index.json

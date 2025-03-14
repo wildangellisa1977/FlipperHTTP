@@ -28,7 +28,7 @@ struct RGB
 constexpr RGB COLOR_OFF = {0, 0, 0};
 constexpr RGB COLOR_GREEN = {0, 255, 0};
 
-#elif BOARD_ESP32_S3
+#elif defined(BOARD_ESP32_S3)
 #ifndef RGB_BUILTIN
 #include <Adafruit_NeoPixel.h>
 
@@ -46,7 +46,7 @@ struct RGB
 constexpr RGB COLOR_OFF = {0, 0, 0};
 constexpr RGB COLOR_GREEN = {0, 255, 0};
 #endif
-#elif BOARD_ESP32_C3
+#elif defined(BOARD_ESP32_C3)
 #include <Adafruit_NeoPixel.h>
 
 // The LED pin may differ for whatever board you are using

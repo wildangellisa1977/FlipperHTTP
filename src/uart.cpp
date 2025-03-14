@@ -2,12 +2,10 @@
 
 size_t UART::available()
 {
-#ifdef BOARD_PICO_W
+#if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
     return this->serial->available();
-#elif BOARD_PICO_2W
-    return this->serial->available();
-#elif BOARD_VGM
-    return this->serial->available();
+#elif defined(BOARD_BW16)
+    return Serial1.available();
 #else
     return Serial.available();
 #endif
@@ -15,15 +13,14 @@ size_t UART::available()
 
 void UART::begin(uint32_t baudrate)
 {
-#ifdef BOARD_PICO_W
+#if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W)
     this->serial = new SerialPIO(0, 1);
     this->serial->begin(baudrate);
-#elif BOARD_PICO_2W
-    this->serial = new SerialPIO(0, 1);
-    this->serial->begin(baudrate);
-#elif BOARD_VGM
+#elif defined(BOARD_VGM)
     this->serial = new SerialPIO(this->tx_pin, this->rx_pin);
     this->serial->begin(baudrate);
+#elif defined(BOARD_BW16)
+    Serial1.begin(baudrate);
 #else
     Serial.begin(baudrate);
 #endif
@@ -39,12 +36,10 @@ void UART::clear_buffer()
 
 void UART::flush()
 {
-#ifdef BOARD_PICO_W
+#if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
     this->serial->flush();
-#elif BOARD_PICO_2W
-    this->serial->flush();
-#elif BOARD_VGM
-    this->serial->flush();
+#elif defined(BOARD_BW16)
+    Serial1.flush();
 #else
     Serial.flush();
 #endif
@@ -52,12 +47,10 @@ void UART::flush()
 
 void UART::print(String str)
 {
-#ifdef BOARD_PICO_W
+#if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
     this->serial->print(str);
-#elif BOARD_PICO_2W
-    this->serial->print(str);
-#elif BOARD_VGM
-    this->serial->print(str);
+#elif defined(BOARD_BW16)
+    Serial1.print(str);
 #else
     Serial.print(str);
 #endif
@@ -67,12 +60,10 @@ void UART::printf(const char *format, ...)
 {
     va_list args;
     va_start(args, format);
-#ifdef BOARD_PICO_W
+#if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
     this->serial->printf(format, args);
-#elif BOARD_PICO_2W
-    this->serial->printf(format, args);
-#elif BOARD_VGM
-    this->serial->printf(format, args);
+#elif defined(BOARD_BW16)
+    // not supported yet
 #else
     Serial.printf(format, args);
 #endif
@@ -81,12 +72,10 @@ void UART::printf(const char *format, ...)
 
 void UART::println(String str)
 {
-#ifdef BOARD_PICO_W
+#if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
     this->serial->println(str);
-#elif BOARD_PICO_2W
-    this->serial->println(str);
-#elif BOARD_VGM
-    this->serial->println(str);
+#elif defined(BOARD_BW16)
+    Serial1.println(str);
 #else
     Serial.println(str);
 #endif
@@ -94,25 +83,21 @@ void UART::println(String str)
 
 uint8_t UART::read()
 {
-#ifdef BOARD_PICO_W
+#if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
     return this->serial->read();
-#elif BOARD_PICO_2W
-    return this->serial->read();
-#elif BOARD_VGM
-    return this->serial->read();
+#elif defined(BOARD_BW16)
+    return Serial1.read();
 #else
-    Serial.read();
+    return Serial.read();
 #endif
 }
 
 uint8_t UART::readBytes(uint8_t *buffer, size_t size)
 {
-#ifdef BOARD_PICO_W
+#if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
     return this->serial->readBytes(buffer, size);
-#elif BOARD_PICO_2W
-    return this->serial->readBytes(buffer, size);
-#elif BOARD_VGM
-    return this->serial->readBytes(buffer, size);
+#elif defined(BOARD_BW16)
+    return Serial1.readBytes(buffer, size);
 #else
     return Serial.readBytes(buffer, size);
 #endif
@@ -122,12 +107,19 @@ String UART::read_serial_line()
 {
     String receivedData = "";
 
-#ifdef BOARD_PICO_W
+#if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
     receivedData = this->serial->readStringUntil('\n');
-#elif BOARD_PICO_2W
-    receivedData = this->serial->readStringUntil('\n');
-#elif BOARD_VGM
-    receivedData = this->serial->readStringUntil('\n');
+#elif defined(BOARD_BW16)
+    while (Serial1.available() > 0)
+    {
+        char incomingChar = Serial1.read();
+        if (incomingChar == '\n')
+        {
+            break;
+        }
+        receivedData += incomingChar;
+        delay(1); // Minimal delay to allow buffer to fill
+    }
 #else
     while (Serial.available() > 0)
     {
@@ -140,9 +132,7 @@ String UART::read_serial_line()
         delay(1); // Minimal delay to allow buffer to fill
     }
 #endif
-
-    receivedData.trim(); // Remove any leading/trailing whitespace
-
+    receivedData.trim();
     return receivedData;
 }
 
@@ -156,12 +146,10 @@ void UART::set_pins(uint8_t tx_pin, uint8_t rx_pin)
 
 void UART::set_timeout(uint32_t timeout)
 {
-#ifdef BOARD_PICO_W
+#if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
     this->serial->setTimeout(timeout);
-#elif BOARD_PICO_2W
-    this->serial->setTimeout(timeout);
-#elif BOARD_VGM
-    this->serial->setTimeout(timeout);
+#elif defined(BOARD_BW16)
+    Serial1.setTimeout(timeout);
 #else
     Serial.setTimeout(timeout);
 #endif
@@ -169,12 +157,10 @@ void UART::set_timeout(uint32_t timeout)
 
 void UART::write(const uint8_t *buffer, size_t size)
 {
-#ifdef BOARD_PICO_W
+#if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
     this->serial->write(buffer, size);
-#elif BOARD_PICO_2W
-    this->serial->write(buffer, size);
-#elif BOARD_VGM
-    this->serial->write(buffer, size);
+#elif defined(BOARD_BW16)
+    Serial1.write(buffer, size);
 #else
     Serial.write(buffer, size);
 #endif
