@@ -85,6 +85,12 @@ ESP32-C3 -> Flipper
 - 3v3 -> Pin 9 (3v3)
 - GND -> Pin 11 (GND)
 
+BW16 -> Flipper
+- SERIAL1_TX (PB1 - Pin 4) -> Pin 14 (RX)
+- SERIAL1_RX (PB2 - Pin 5) -> Pin 13 (TX)
+- 3v3 -> Pin 9 (3v3)
+- GND -> Pin 11 (GND)
+
 ## Video Game Module Wiring
 How to make a custom attachment for the VGM: https://www.youtube.com/watch?v=iNwOJzZCplc
 
