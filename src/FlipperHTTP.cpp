@@ -3,7 +3,7 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over tthis->uart.
 Created: 2024-09-30
-Updated: 2025-03-11
+Updated: 2025-03-25
 */
 
 #include "FlipperHTTP.h"
@@ -1483,6 +1483,15 @@ void FlipperHTTP::loop()
             // Begin the WebSocket connection (performs the handshake)
             ws.begin();
 
+            if (!ws.connected())
+            {
+                this->uart.println(F("[ERROR] WebSocket connection failed."));
+                this->led.off();
+                return;
+            }
+
+            Serial.println(F("[SOCKET/CONNECTED]"));
+
             // send headers
             for (int i = 0; i < headerSize; i++)
             {
@@ -1520,8 +1529,11 @@ void FlipperHTTP::loop()
                     this->uart.println(wsMessage);
                 }
             }
+
             // Close the WebSocket connection
             ws.stop();
+
+            Serial.println(F("[SOCKET/STOPPED]"));
         }
 
         this->led.off();

@@ -44,6 +44,7 @@ The FlipperHTTP firmware supports eight boards. Instructions for each board can 
 - **ESP32-WROOM:** [https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-WROOM](https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-WROOM)
 - **ESP32-WROVER:** [https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-WROVER](https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-WROVER)
 - **ESP32-C3:** [https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-WROVER](https://github.com/jblanked/FlipperHTTP/tree/main/ESP32-C3)
+- **BW16:** [https://github.com/jblanked/FlipperHTTP/tree/main/BW16](https://github.com/jblanked/FlipperHTTP/tree/main/BW16)
 
 
 ## Wiring
