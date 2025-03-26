@@ -3,7 +3,7 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over serial.
 Created: 2024-09-30
-Updated: 2025-03-25
+Updated: 2025-03-26
 
 Change Log:
 - 2024-09-30: Initial commit
@@ -33,6 +33,7 @@ Change Log:
 - 2025-02-22: Update the request response to include the status code and content length
 - 2025-03-11: Updated certs and started support for the BW16 board (storage.cpp is left)
 - 2025-03-25: Check if websocket is connected
+- 2025-03-26: Updated websocket setup
 */
 #pragma once
 #include "certs.h"

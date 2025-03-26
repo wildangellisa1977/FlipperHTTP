@@ -3,7 +3,7 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over tthis->uart.
 Created: 2024-09-30
-Updated: 2025-03-25
+Updated: 2025-03-26
 */
 
 #include "FlipperHTTP.h"
@@ -1431,57 +1431,100 @@ void FlipperHTTP::loop()
         // websocket
         else if (_data.startsWith("[SOCKET/START]"))
         {
-            // extract the JSON by removing the command part
+            // Remove the command prefix to isolate the JSON payload
             String jsonData = _data.substring(strlen("[SOCKET/START]"));
             jsonData.trim();
 
-            JsonDocument doc;
+            // Create a DynamicJsonDocument with an appropriate size
+            DynamicJsonDocument doc(1024);
             DeserializationError error = deserializeJson(doc, jsonData);
 
             if (error)
             {
-                this->uart.print(F("[ERROR] Failed to parse JSON."));
+                this->uart.println(F("[ERROR] Failed to parse JSON."));
                 this->led.off();
                 return;
             }
 
-            // Extract values from JSON
+            // Ensure that the JSON contains a "url" and "port"
             if (!doc.containsKey("url"))
             {
                 this->uart.println(F("[ERROR] JSON does not contain url."));
                 this->led.off();
                 return;
             }
-            const char *url = doc["url"];
+            String fullUrl = doc["url"].as<String>();
+
             if (!doc.containsKey("port"))
             {
                 this->uart.println(F("[ERROR] JSON does not contain port."));
                 this->led.off();
                 return;
             }
-            int port = doc["port"];
+            int port = doc["port"].as<int>();
+
+            // Parse the fullUrl to extract server name and path.
+            // Expected format: "ws://www.jblanked.com/ws/game/new/"
+            String serverName;
+            String path = "/";
+
+            // Remove protocol ("ws://" or "wss://")
+            if (fullUrl.startsWith("ws://"))
+            {
+                fullUrl = fullUrl.substring(5);
+            }
+            else if (fullUrl.startsWith("wss://"))
+            {
+                fullUrl = fullUrl.substring(6);
+            }
+
+            // Look for the first '/' that separates the server name from the path.
+            int slashIndex = fullUrl.indexOf('/');
+            if (slashIndex != -1)
+            {
+                serverName = fullUrl.substring(0, slashIndex);
+                path = fullUrl.substring(slashIndex);
+            }
+            else
+            {
+                serverName = fullUrl;
+                path = "/";
+            }
 
             // Extract headers if available
+            int headerSize = 0;
             const char *headerKeys[10];
             const char *headerValues[10];
-            int headerSize = 0;
 
             if (doc.containsKey("headers"))
             {
                 JsonObject headers = doc["headers"];
-                for (JsonPair header : headers)
+                for (JsonPair kv : headers)
                 {
-                    headerKeys[headerSize] = header.key().c_str();
-                    headerValues[headerSize] = header.value();
+                    headerKeys[headerSize] = kv.key().c_str();
+                    headerValues[headerSize] = kv.value().as<const char *>();
                     headerSize++;
                 }
             }
 
-            // start the websocket
-            WebSocketClient ws = WebSocketClient(this->client, url, port);
+            /*
+              weirdly enough, using our client didn't work for all websites
+              in the future we should try to connect with our client first,
+              then if it fails, use the WiFiClient.
+            */
+            WiFiClient wifi;
 
-            // Begin the WebSocket connection (performs the handshake)
-            ws.begin();
+            // Create your WebSocketClient with the client, server name, and port
+            WebSocketClient ws = WebSocketClient(wifi, serverName.c_str(), port);
+
+            // Send headers, if any
+            for (int i = 0; i < headerSize; i++)
+            {
+                ws.sendHeader(headerKeys[i], headerValues[i]);
+            }
+
+            // Begin the WebSocket connection, passing in the extracted path
+            ws.begin(path.c_str());
 
             if (!ws.connected())
             {
@@ -1492,12 +1535,6 @@ void FlipperHTTP::loop()
 
             Serial.println(F("[SOCKET/CONNECTED]"));
 
-            // send headers
-            for (int i = 0; i < headerSize; i++)
-            {
-                ws.sendHeader(headerKeys[i], headerValues[i]);
-            }
-
             // Check if a message is available from the server:
             if (ws.parseMessage() > 0)
             {
@@ -1506,7 +1543,7 @@ void FlipperHTTP::loop()
                 this->uart.println(message);
             }
 
-            // wait for incoming serial/client data, and send back-n-forth
+            // Wait for incoming serial/client data, and send back-n-forth
             String uartMessage = "";
             String wsMessage = "";
             while (ws.connected() && !uartMessage.startsWith("[SOCKET/STOP]"))
@@ -1532,7 +1569,6 @@ void FlipperHTTP::loop()
 
             // Close the WebSocket connection
             ws.stop();
-
             Serial.println(F("[SOCKET/STOPPED]"));
         }
 
