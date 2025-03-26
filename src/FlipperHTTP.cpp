@@ -1483,6 +1483,15 @@ void FlipperHTTP::loop()
             // Begin the WebSocket connection (performs the handshake)
             ws.begin();
 
+            if (!ws.connected())
+            {
+                this->uart.println(F("[ERROR] WebSocket connection failed."));
+                this->led.off();
+                return;
+            }
+
+            Serial.println(F("[SOCKET/CONNECTED]"));
+
             // send headers
             for (int i = 0; i < headerSize; i++)
             {
@@ -1520,8 +1529,11 @@ void FlipperHTTP::loop()
                     this->uart.println(wsMessage);
                 }
             }
+
             // Close the WebSocket connection
             ws.stop();
+
+            Serial.println(F("[SOCKET/STOPPED]"));
         }
 
         this->led.off();
