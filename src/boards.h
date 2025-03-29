@@ -1,5 +1,9 @@
 #pragma once
-// uncomment the board you are using
+/* Default settings for all boards. Make sure to uncomment the board you are using
+- Upload Speed: 115200
+- Partition Scheme: Minimal SPIFFS (with OTA)
+- Erase All Flash Before Sketch Upload: "Enabled"
+*/
 //      Definition                   Board manager                       Board Manager Library/Link
 //      ---------------------       ---------------------                  ---------------------
 // #define BOARD_WIFI_DEV 0     // ESP32S2 Dev Module            esp32 by Espressif Systems
