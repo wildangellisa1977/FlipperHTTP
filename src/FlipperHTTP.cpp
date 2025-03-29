@@ -3,63 +3,14 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over tthis->uart.
 Created: 2024-09-30
-Updated: 2025-03-26
+Updated: 2025-03-29
 */
 
 #include "FlipperHTTP.h"
 #include "storage.h"
 
-// Clear serial buffer to avoid any residual data
-void FlipperHTTP::clearSerialBuffer()
-{
-    this->uart.clear_buffer();
-}
-
-//  Connect to Wifi using the loaded SSID and Password
-bool FlipperHTTP::connectToWifi()
-{
-    if (strlen(loadedSSID) == 0 || strlen(loadedPassword) == 0)
-    {
-        this->uart.println(F("[ERROR] WiFi SSID or Password is empty."));
-        return false;
-    }
-
-#ifndef BOARD_BW16
-    WiFi.disconnect(true); // Ensure WiFi is disconnected before reconnecting
-#else
-    WiFi.disconnect();
-#endif
-    WiFi.begin(loadedSSID, loadedPassword);
-#ifdef BOARD_ESP32_C3
-    WiFi.setTxPower(WIFI_POWER_8_5dBm);
-#endif
-
-    int i = 0;
-    while (!this->isConnectedToWifi() && i < 20)
-    {
-        delay(500);
-        i++;
-        this->uart.print(".");
-    }
-    this->uart.println(); // Move to next line after dots
-
-    if (this->isConnectedToWifi())
-    {
-        this->uart.println(F("[SUCCESS] Successfully connected to Wifi."));
-#ifndef BOARD_BW16
-        configTime(0, 0, "pool.ntp.org", "time.nist.gov"); // get UTC time via NTP
-#endif
-        return true;
-    }
-    else
-    {
-        this->uart.println(F("[ERROR] Failed to connect to Wifi."));
-        return false;
-    }
-}
-
 // Load WiFi settings from SPIFFS and attempt to connect
-bool FlipperHTTP::loadWifiSettings()
+bool FlipperHTTP::load_wifi()
 {
     String fileContent = file_read(settingsFilePath);
     JsonDocument doc;
@@ -76,27 +27,12 @@ bool FlipperHTTP::loadWifiSettings()
         const char *ssid = wifi["ssid"];
         const char *password = wifi["password"];
 
-        strncpy(loadedSSID, ssid, sizeof(loadedSSID));
-        strncpy(loadedPassword, password, sizeof(loadedPassword));
+        strncpy(loaded_ssid, ssid, sizeof(loaded_ssid));
+        strncpy(loaded_pass, password, sizeof(loaded_pass));
 
-#ifdef BOARD_BW16
-        WiFi.begin((char *)ssid, password);
-#else
-        WiFi.begin(ssid, password);
-#endif
-
-        int attempts = 0;
-        while (!this->isConnectedToWifi() && attempts < 4) // 2 seconds total, 500ms delay each
+        // if WiFi connects return true otherwise continue
+        if (this->wifi.connect(loaded_ssid, loaded_pass))
         {
-            delay(500);
-            attempts++;
-        }
-
-        if (this->isConnectedToWifi())
-        {
-#ifndef BOARD_BW16
-            configTime(0, 0, "pool.ntp.org", "time.nist.gov"); // get UTC time via NTP
-#endif
             return true;
         }
     }
@@ -175,7 +111,7 @@ String FlipperHTTP::request(
     }
 
     // Clear serial buffer to avoid any residual data
-    this->clearSerialBuffer();
+    this->this->uart.clear_buffer();
 
     return response;
 }
@@ -261,18 +197,17 @@ String FlipperHTTP::request(
     }
 
     // Clear serial buffer to avoid any residual data
-    this->clearSerialBuffer();
+    this->uart.clear_buffer();
 
     return response;
 }
 #endif
 
 // Save WiFi settings to storage
-bool FlipperHTTP::saveWifiSettings(String jsonData)
+bool FlipperHTTP::save_wifi(String jsonData)
 {
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, jsonData);
-
     if (error)
     {
         this->uart.println(F("[ERROR] Failed to parse JSON data."));
@@ -311,23 +246,6 @@ bool FlipperHTTP::saveWifiSettings(String jsonData)
 
     this->uart.print(F("[SUCCESS] Settings saved."));
     return true;
-}
-
-// returns a string of all wifi networks
-String FlipperHTTP::scanWifiNetworks()
-{
-    int n = WiFi.scanNetworks();
-    String networks = "";
-    for (int i = 0; i < n; ++i)
-    {
-        networks += WiFi.SSID(i);
-
-        if (i < n - 1)
-        {
-            networks += ", ";
-        }
-    }
-    return networks;
 }
 
 void FlipperHTTP::setup()
@@ -385,9 +303,9 @@ void FlipperHTTP::setup()
         ESP.restart();
     }
 #endif
-    this->useLED = true;
+    this->use_led = true;
     this->led.start();
-    this->loadWifiSettings();
+    this->load_wifi(); // Load WiFi settings from SPIFFS
 #ifndef BOARD_BW16
     this->client.setCACert(root_ca);
 #else
@@ -631,8 +549,8 @@ bool FlipperHTTP::read_serial_settings(String receivedData, bool connectAfterSav
     // Extract values from JSON
     if (doc.containsKey("ssid") && doc.containsKey("password"))
     {
-        strncpy(loadedSSID, doc["ssid"], sizeof(loadedSSID));             // save ssid
-        strncpy(loadedPassword, doc["password"], sizeof(loadedPassword)); // save password
+        strncpy(loaded_ssid, doc["ssid"], sizeof(loaded_ssid));     // save ssid
+        strncpy(loaded_pass, doc["password"], sizeof(loaded_pass)); // save password
     }
     else
     {
@@ -641,14 +559,14 @@ bool FlipperHTTP::read_serial_settings(String receivedData, bool connectAfterSav
     }
 
     // Save to storage
-    if (!this->saveWifiSettings(receivedData))
+    if (!this->save_wifi(receivedData))
     {
         this->uart.println(F("[ERROR] Failed to save settings to file."));
         return false;
     }
 
     // Attempt to reconnect with new settings
-    if (connectAfterSave && this->connectToWifi())
+    if (connectAfterSave && this->wifi.connect(loaded_ssid, loaded_pass))
     {
         this->uart.println(F("[SUCCESS] Connected to the new Wifi network."));
     }
@@ -838,22 +756,22 @@ void FlipperHTTP::loop()
         // handle [LED/ON] command
         else if (_data.startsWith("[LED/ON]"))
         {
-            this->useLED = true;
+            this->use_led = true;
         }
         // handle [LED/OFF] command
         else if (_data.startsWith("[LED/OFF]"))
         {
-            this->useLED = false;
+            this->use_led = false;
         }
         // handle [IP/ADDRESS] command (local IP)
         else if (_data.startsWith("[IP/ADDRESS]"))
         {
-            this->uart.println(this->getIPAddress());
+            this->uart.println(this->wifi.device_ip());
         }
         // handle [WIFI/IP] command ip of connected wifi
         else if (_data.startsWith("[WIFI/IP]"))
         {
-            if (!this->isConnectedToWifi() && !this->connectToWifi())
+            if (!this->wifi.is_connected() && !this->wifi.connect(loaded_ssid, loaded_pass))
             {
                 this->uart.println(F("[ERROR] Not connected to Wifi. Failed to reconnect."));
                 this->led.off();
@@ -890,7 +808,7 @@ void FlipperHTTP::loop()
         // Handle [REBOOT] command
         else if (_data.startsWith("[REBOOT]"))
         {
-            this->useLED = true;
+            this->use_led = true;
 #if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
             rp2040.reboot();
 #elif defined(BOARD_BW16)
@@ -902,8 +820,11 @@ void FlipperHTTP::loop()
         // scan for wifi networks
         else if (_data.startsWith("[WIFI/SCAN]"))
         {
-            this->uart.println(this->scanWifiNetworks());
+            this->uart.println(F("[GET/SUCCESS]"));
+            this->uart.println(this->wifi.scan());
             this->uart.flush();
+            this->uart.println();
+            this->uart.println(F("[GET/END]"));
         }
         // Handle Wifi list command
         else if (_data.startsWith("[WIFI/LIST]"))
@@ -933,10 +854,10 @@ void FlipperHTTP::loop()
         else if (_data == "[WIFI/CONNECT]")
         {
             // Check if WiFi is already connected
-            if (!this->isConnectedToWifi())
+            if (!this->wifi.is_connected())
             {
                 // Attempt to connect to Wifi
-                if (this->connectToWifi())
+                if (this->wifi.connect(loaded_ssid, loaded_pass))
                 {
                     this->uart.println(F("[SUCCESS] Connected to Wifi."));
                 }
@@ -953,18 +874,14 @@ void FlipperHTTP::loop()
         // Handle [WIFI/DISCONNECT] command
         else if (_data == "[WIFI/DISCONNECT]")
         {
-#ifndef BOARD_BW16
-            WiFi.disconnect(true);
-#else
-            WiFi.disconnect();
-#endif
+            this->wifi.disconnect();
             this->uart.println(F("[DISCONNECTED] WiFi has been disconnected."));
         }
         // Handle [GET] command
         else if (_data.startsWith("[GET]"))
         {
 
-            if (!this->isConnectedToWifi() && !this->connectToWifi())
+            if (!this->wifi.is_connected() && !this->wifi.connect(loaded_ssid, loaded_pass))
             {
                 this->uart.println(F("[ERROR] Not connected to WiFi. Failed to reconnect."));
                 this->led.off();
@@ -991,7 +908,7 @@ void FlipperHTTP::loop()
         // Handle [GET/HTTP] command
         else if (_data.startsWith("[GET/HTTP]"))
         {
-            if (!this->isConnectedToWifi() && !this->connectToWifi())
+            if (!this->wifi.is_connected() && !this->wifi.connect(loaded_ssid, loaded_pass))
             {
                 this->uart.println(F("[ERROR] Not connected to Wifi. Failed to reconnect."));
                 this->led.off();
@@ -1054,7 +971,7 @@ void FlipperHTTP::loop()
         // Handle [POST/HTTP] command
         else if (_data.startsWith("[POST/HTTP]"))
         {
-            if (!this->isConnectedToWifi() && !this->connectToWifi())
+            if (!this->wifi.is_connected() && !this->wifi.connect(loaded_ssid, loaded_pass))
             {
                 this->uart.println(F("[ERROR] Not connected to Wifi. Failed to reconnect."));
                 this->led.off();
@@ -1118,7 +1035,7 @@ void FlipperHTTP::loop()
         // Handle [PUT/HTTP] command
         else if (_data.startsWith("[PUT/HTTP]"))
         {
-            if (!this->isConnectedToWifi() && !this->connectToWifi())
+            if (!this->wifi.is_connected() && !this->wifi.connect(loaded_ssid, loaded_pass))
             {
                 this->uart.println(F("[ERROR] Not connected to Wifi. Failed to reconnect."));
                 this->led.off();
@@ -1182,7 +1099,7 @@ void FlipperHTTP::loop()
         // Handle [DELETE/HTTP] command
         else if (_data.startsWith("[DELETE/HTTP]"))
         {
-            if (!this->isConnectedToWifi() && !this->connectToWifi())
+            if (!this->wifi.is_connected() && !this->wifi.connect(loaded_ssid, loaded_pass))
             {
                 this->uart.println(F("[ERROR] Not connected to Wifi. Failed to reconnect."));
                 this->led.off();
@@ -1247,7 +1164,7 @@ void FlipperHTTP::loop()
         // Handle [GET/BYTES]
         else if (_data.startsWith("[GET/BYTES]"))
         {
-            if (!this->isConnectedToWifi() && !this->connectToWifi())
+            if (!this->wifi.is_connected() && !this->wifi.connect(loaded_ssid, loaded_pass))
             {
                 this->uart.println(F("[ERROR] Not connected to Wifi. Failed to reconnect."));
                 this->led.off();
@@ -1302,7 +1219,7 @@ void FlipperHTTP::loop()
         // handle [POST/BYTES]
         else if (_data.startsWith("[POST/BYTES]"))
         {
-            if (!this->isConnectedToWifi() && !this->connectToWifi())
+            if (!this->wifi.is_connected() && !this->wifi.connect(loaded_ssid, loaded_pass))
             {
                 this->uart.println(F("[ERROR] Not connected to Wifi. Failed to reconnect."));
                 this->led.off();
@@ -1512,10 +1429,10 @@ void FlipperHTTP::loop()
               in the future we should try to connect with our client first,
               then if it fails, use the WiFiClient.
             */
-            WiFiClient wifi;
+            WiFiClient wifi_client;
 
             // Create your WebSocketClient with the client, server name, and port
-            WebSocketClient ws = WebSocketClient(wifi, serverName.c_str(), port);
+            WebSocketClient ws = WebSocketClient(wifi_client, serverName.c_str(), port);
 
             // Send headers, if any
             for (int i = 0; i < headerSize; i++)

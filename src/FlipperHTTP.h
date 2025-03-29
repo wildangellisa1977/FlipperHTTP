@@ -3,7 +3,7 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over serial.
 Created: 2024-09-30
-Updated: 2025-03-26
+Updated: 2025-03-29
 
 Change Log:
 - 2024-09-30: Initial commit
@@ -31,22 +31,16 @@ Change Log:
 - 2025-02-16: Added support for the ESP32-C3 board (@dj1ch)
 - 2025-02-21: Simplified HTTP requests
 - 2025-02-22: Update the request response to include the status code and content length
-- 2025-03-11: Updated certs and started support for the BW16 board (storage.cpp is left)
+- 2025-03-11: Updated certs and support for the BW16 board
 - 2025-03-25: Check if websocket is connected
 - 2025-03-26: Updated websocket setup
+- 2025-03-29: Created a WiFiUtils class to handle WiFi functions (wifi_utils.h/cpp)
 */
 #pragma once
 #include "certs.h"
 #include "led.h"
 #include "uart.h"
-#ifndef BOARD_BW16
-#include <HTTPClient.h>
-#include <WiFiClientSecure.h>
-#else
-#include "WiFiClient.h"
-#include "WiFiServer.h"
-#endif
-#include "WiFi.h"
+#include "wifi_utils.h"
 #include <ArduinoJson.h>
 #include <Arduino.h>
 #include <ArduinoHttpClient.h>
@@ -63,15 +57,7 @@ public:
     {
     }
 
-    void clearSerialBuffer(); // Clear serial buffer to avoid any residual data
-    bool connectToWifi();     // Connect to Wifi using the loaded SSID and Password
-#ifndef BOARD_BW16
-    String getIPAddress() { return WiFi.localIP().toString(); } // get IP addresss
-#else
-    String getIPAddress() { return WiFi.localIP().get_address(); } // get IP addresss
-#endif
-    bool isConnectedToWifi() { return WiFi.status() == WL_CONNECTED; } // Check if the Dev Board is connected to Wifi
-    bool loadWifiSettings();                                           // Load Wifi settings from storage
+    bool load_wifi(); // Load Wifi settings from storage
     //
     String request(
         const char *method,                   // HTTP method
@@ -82,8 +68,7 @@ public:
         int headerSize = 0                    // Number of headers
     );
     //
-    bool saveWifiSettings(String data);                                                                                                      // Save and Load settings to and from storage
-    String scanWifiNetworks();                                                                                                               // returns a string of all wifi networks
+    bool save_wifi(String data);                                                                                                             // Save and Load settings to and from storage
     void setup();                                                                                                                            // Arduino setup function
     bool stream_bytes(const char *method, String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize); // Stream bytes from server
     bool read_serial_settings(String receivedData, bool connectAfterSave);                                                                   // Read the serial data and save the settings
@@ -91,9 +76,9 @@ public:
 
     void loop(); // Main loop for flipper-http.ino that handles all of the commands
 private:
-    char loadedSSID[64] = {0};     // Variable to store SSID
-    char loadedPassword[64] = {0}; // Variable to store password
-    bool useLED = true;            // Variable to control LED usage
+    char loaded_ssid[64] = {0}; // Variable to store SSID
+    char loaded_pass[64] = {0}; // Variable to store password
+    bool use_led = true;        // Variable to control LED usage
 #ifndef BOARD_BW16
     WiFiClientSecure client; // WiFiClientSecure object for secure connections
 #else
@@ -107,6 +92,8 @@ private:
 #else
     UART uart; // UART object to handle serial communication
 #endif
+
+    WiFiUtils wifi; // WiFiUtils object to handle WiFi connections
 };
 
 const PROGMEM char settingsFilePath[] = "/flipper-http.json"; // Path to the settings file in the SPIFFS file system
