@@ -820,8 +820,11 @@ void FlipperHTTP::loop()
         // scan for wifi networks
         else if (_data.startsWith("[WIFI/SCAN]"))
         {
+            this->uart.println(F("[GET/SUCCESS]"));
             this->uart.println(this->wifi.scan());
             this->uart.flush();
+            this->uart.println();
+            this->uart.println(F("[GET/END]"));
         }
         // Handle Wifi list command
         else if (_data.startsWith("[WIFI/LIST]"))
