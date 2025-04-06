@@ -506,6 +506,12 @@ FuriString *flipper_http_load_from_file(char *file_path)
  */
 FuriString *flipper_http_load_from_file_with_limit(char *file_path, size_t limit)
 {
+    if (memmgr_heap_get_max_free_block() < limit)
+    {
+        FURI_LOG_E(HTTP_TAG, "Not enough heap to read file.");
+        return NULL;
+    }
+
     // Open the storage record
     Storage *storage = furi_record_open(RECORD_STORAGE);
     if (!storage)
@@ -532,7 +538,19 @@ FuriString *flipper_http_load_from_file_with_limit(char *file_path, size_t limit
         return NULL;
     }
 
-    if (memmgr_get_free_heap() < limit)
+    size_t file_size = storage_file_size(file);
+
+    if (file_size > limit)
+    {
+        FURI_LOG_E(HTTP_TAG, "File size exceeds limit: %d > %d", file_size, limit);
+        storage_file_close(file);
+        storage_file_free(file);
+        furi_record_close(RECORD_STORAGE);
+        return NULL;
+    }
+
+    // final memory check
+    if (memmgr_heap_get_max_free_block() < file_size)
     {
         FURI_LOG_E(HTTP_TAG, "Not enough heap to read file.");
         storage_file_close(file);
@@ -542,7 +560,7 @@ FuriString *flipper_http_load_from_file_with_limit(char *file_path, size_t limit
     }
 
     // Allocate a buffer to hold the read data
-    uint8_t *buffer = (uint8_t *)malloc(limit);
+    uint8_t *buffer = (uint8_t *)malloc(file_size);
     if (!buffer)
     {
         FURI_LOG_E(HTTP_TAG, "Failed to allocate buffer");
@@ -563,10 +581,10 @@ FuriString *flipper_http_load_from_file_with_limit(char *file_path, size_t limit
         furi_record_close(RECORD_STORAGE);
         return NULL;
     }
-    furi_string_reserve(str_result, limit);
+    furi_string_reserve(str_result, file_size);
 
     // Read data into the buffer
-    size_t read_count = storage_file_read(file, buffer, limit);
+    size_t read_count = storage_file_read(file, buffer, file_size);
     if (storage_file_get_error(file) != FSE_OK)
     {
         FURI_LOG_E(HTTP_TAG, "Error reading from file.");
