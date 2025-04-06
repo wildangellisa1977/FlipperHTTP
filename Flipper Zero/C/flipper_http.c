@@ -446,6 +446,29 @@ FuriString *flipper_http_load_from_file(char *file_path)
         return NULL;
     }
 
+    size_t file_size = storage_file_size(file);
+
+    // final memory check
+    if (memmgr_heap_get_max_free_block() < file_size)
+    {
+        FURI_LOG_E(HTTP_TAG, "Not enough heap to read file.");
+        storage_file_close(file);
+        storage_file_free(file);
+        furi_record_close(RECORD_STORAGE);
+        return NULL;
+    }
+
+    // Allocate a buffer to hold the read data
+    uint8_t *buffer = (uint8_t *)malloc(file_size);
+    if (!buffer)
+    {
+        FURI_LOG_E(HTTP_TAG, "Failed to allocate buffer");
+        storage_file_close(file);
+        storage_file_free(file);
+        furi_record_close(RECORD_STORAGE);
+        return NULL;
+    }
+
     // Allocate a FuriString to hold the received data
     FuriString *str_result = furi_string_alloc();
     if (!str_result)
@@ -459,18 +482,6 @@ FuriString *flipper_http_load_from_file(char *file_path)
 
     // Reset the FuriString to ensure it's empty before reading
     furi_string_reset(str_result);
-
-    // Define a buffer to hold the read data
-    uint8_t *buffer = (uint8_t *)malloc(MAX_FILE_SHOW);
-    if (!buffer)
-    {
-        FURI_LOG_E(HTTP_TAG, "Failed to allocate buffer");
-        furi_string_free(str_result);
-        storage_file_close(file);
-        storage_file_free(file);
-        furi_record_close(RECORD_STORAGE);
-        return NULL;
-    }
 
     // Read data into the buffer
     size_t read_count = storage_file_read(file, buffer, MAX_FILE_SHOW);
