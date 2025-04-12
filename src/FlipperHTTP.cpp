@@ -751,7 +751,7 @@ void FlipperHTTP::loop()
         // print the available commands
         if (_data.startsWith("[LIST]"))
         {
-            this->uart.println(F("[LIST], [PING], [REBOOT], [WIFI/IP], [WIFI/SCAN], [WIFI/SAVE], [WIFI/CONNECT], [WIFI/DISCONNECT], [WIFI/LIST], [GET], [GET/HTTP], [POST/HTTP], [PUT/HTTP], [DELETE/HTTP], [GET/BYTES], [POST/BYTES], [PARSE], [PARSE/ARRAY], [LED/ON], [LED/OFF], [IP/ADDRESS]"));
+            this->uart.println(F("[LIST], [PING], [REBOOT], [WIFI/IP], [WIFI/SCAN], [WIFI/SAVE], [WIFI/CONNECT], [WIFI/DISCONNECT], [WIFI/LIST], [GET], [GET/HTTP], [POST/HTTP], [PUT/HTTP], [DELETE/HTTP], [GET/BYTES], [POST/BYTES], [PARSE], [PARSE/ARRAY], [LED/ON], [LED/OFF], [IP/ADDRESS], [WIFI/AP]"));
         }
         // handle [LED/ON] command
         else if (_data.startsWith("[LED/ON]"))
@@ -771,7 +771,7 @@ void FlipperHTTP::loop()
         // handle [WIFI/IP] command ip of connected wifi
         else if (_data.startsWith("[WIFI/IP]"))
         {
-            if (!this->wifi.is_connected() && !this->wifi.connect(loaded_ssid, loaded_pass))
+            if (!this->wifi.isConnected() && !this->wifi.connect(loaded_ssid, loaded_pass))
             {
                 this->uart.println(F("[ERROR] Not connected to Wifi. Failed to reconnect."));
                 this->led.off();
@@ -857,7 +857,7 @@ void FlipperHTTP::loop()
         else if (_data == "[WIFI/CONNECT]")
         {
             // Check if WiFi is already connected
-            if (!this->wifi.is_connected())
+            if (!this->wifi.isConnected())
             {
                 // Attempt to connect to Wifi
                 if (this->wifi.connect(loaded_ssid, loaded_pass))
@@ -884,7 +884,7 @@ void FlipperHTTP::loop()
         else if (_data.startsWith("[GET]"))
         {
 
-            if (!this->wifi.is_connected() && !this->wifi.connect(loaded_ssid, loaded_pass))
+            if (!this->wifi.isConnected() && !this->wifi.connect(loaded_ssid, loaded_pass))
             {
                 this->uart.println(F("[ERROR] Not connected to WiFi. Failed to reconnect."));
                 this->led.off();
@@ -911,7 +911,7 @@ void FlipperHTTP::loop()
         // Handle [GET/HTTP] command
         else if (_data.startsWith("[GET/HTTP]"))
         {
-            if (!this->wifi.is_connected() && !this->wifi.connect(loaded_ssid, loaded_pass))
+            if (!this->wifi.isConnected() && !this->wifi.connect(loaded_ssid, loaded_pass))
             {
                 this->uart.println(F("[ERROR] Not connected to Wifi. Failed to reconnect."));
                 this->led.off();
@@ -974,7 +974,7 @@ void FlipperHTTP::loop()
         // Handle [POST/HTTP] command
         else if (_data.startsWith("[POST/HTTP]"))
         {
-            if (!this->wifi.is_connected() && !this->wifi.connect(loaded_ssid, loaded_pass))
+            if (!this->wifi.isConnected() && !this->wifi.connect(loaded_ssid, loaded_pass))
             {
                 this->uart.println(F("[ERROR] Not connected to Wifi. Failed to reconnect."));
                 this->led.off();
@@ -1038,7 +1038,7 @@ void FlipperHTTP::loop()
         // Handle [PUT/HTTP] command
         else if (_data.startsWith("[PUT/HTTP]"))
         {
-            if (!this->wifi.is_connected() && !this->wifi.connect(loaded_ssid, loaded_pass))
+            if (!this->wifi.isConnected() && !this->wifi.connect(loaded_ssid, loaded_pass))
             {
                 this->uart.println(F("[ERROR] Not connected to Wifi. Failed to reconnect."));
                 this->led.off();
@@ -1102,7 +1102,7 @@ void FlipperHTTP::loop()
         // Handle [DELETE/HTTP] command
         else if (_data.startsWith("[DELETE/HTTP]"))
         {
-            if (!this->wifi.is_connected() && !this->wifi.connect(loaded_ssid, loaded_pass))
+            if (!this->wifi.isConnected() && !this->wifi.connect(loaded_ssid, loaded_pass))
             {
                 this->uart.println(F("[ERROR] Not connected to Wifi. Failed to reconnect."));
                 this->led.off();
@@ -1167,7 +1167,7 @@ void FlipperHTTP::loop()
         // Handle [GET/BYTES]
         else if (_data.startsWith("[GET/BYTES]"))
         {
-            if (!this->wifi.is_connected() && !this->wifi.connect(loaded_ssid, loaded_pass))
+            if (!this->wifi.isConnected() && !this->wifi.connect(loaded_ssid, loaded_pass))
             {
                 this->uart.println(F("[ERROR] Not connected to Wifi. Failed to reconnect."));
                 this->led.off();
@@ -1222,7 +1222,7 @@ void FlipperHTTP::loop()
         // handle [POST/BYTES]
         else if (_data.startsWith("[POST/BYTES]"))
         {
-            if (!this->wifi.is_connected() && !this->wifi.connect(loaded_ssid, loaded_pass))
+            if (!this->wifi.isConnected() && !this->wifi.connect(loaded_ssid, loaded_pass))
             {
                 this->uart.println(F("[ERROR] Not connected to Wifi. Failed to reconnect."));
                 this->led.off();
@@ -1453,7 +1453,7 @@ void FlipperHTTP::loop()
                 return;
             }
 
-            Serial.println(F("[SOCKET/CONNECTED]"));
+            this->uart.println(F("[SOCKET/CONNECTED]"));
 
             // Check if a message is available from the server:
             if (ws.parseMessage() > 0)
@@ -1489,7 +1489,98 @@ void FlipperHTTP::loop()
 
             // Close the WebSocket connection
             ws.stop();
-            Serial.println(F("[SOCKET/STOPPED]"));
+            this->uart.println(F("[SOCKET/STOPPED]"));
+        }
+        // [WIFI/AP] AP Mode
+        else if (_data.startsWith("[WIFI/AP]"))
+        {
+
+            // Extract the JSON by removing the command part
+            String jsonData = _data.substring(strlen("[WIFI/AP]"));
+            jsonData.trim();
+
+            JsonDocument doc;
+            DeserializationError error = deserializeJson(doc, jsonData);
+
+            if (error)
+            {
+                this->uart.print(F("[ERROR] Failed to parse JSON."));
+                this->led.off();
+                return;
+            }
+
+            // Extract values from JSON
+            if (!doc.containsKey("ssid"))
+            {
+                this->uart.println(F("[ERROR] JSON does not contain ssid."));
+                this->led.off();
+                return;
+            }
+            String ssid = doc["ssid"];
+
+            // Start AP mode
+            String ipAddress = this->wifi.connectAP(ssid.c_str());
+            if (ipAddress != "")
+            {
+                char buffer[64];
+                snprintf(buffer, sizeof(buffer), "[SUCCESS]{\"IP\":\"%s\"}", ipAddress.c_str());
+                this->uart.println(buffer);
+                this->uart.flush();
+
+                WiFiServer server(80);
+                server.begin();
+                this->uart.println(F("[INFO] AP mode started. Waiting for clients..."));
+
+                // Keep the server running until a [WIFI/AP/STOP] command is received via UART.
+                while (true)
+                {
+                    // Check for UART command to stop AP mode.
+                    if (this->uart.available())
+                    {
+                        String uartCmd = this->uart.read_serial_line();
+                        if (uartCmd.startsWith("[WIFI/AP/STOP]"))
+                        {
+                            this->uart.println(F("[INFO] Stopping AP mode."));
+                            break;
+                        }
+                    }
+
+                    // Check for an incoming client connection.
+                    WiFiClient client = server.available();
+                    if (client)
+                    {
+                        this->uart.println(F("[INFO] Client Connected."));
+                        String currentLine = "";
+                        while (client.connected())
+                        {
+                            if (client.available())
+                            {
+                                char c = client.read();
+                                if (c == '\n')
+                                {
+                                    // Send HTTP response.
+                                    client.println(F("HTTP/1.1 200 OK"));
+                                    client.println(F("Content-type:text/html"));
+                                    client.println();
+                                    client.println(F("<!DOCTYPE html><html>"));
+                                    client.println(F("<head><title>FlipperHTTP</title></head>"));
+                                    client.println(F("<body><h1>Welcome to FlipperHTTP AP Mode</h1></body>"));
+                                    client.println(F("</html>"));
+                                    break;
+                                }
+                            }
+                        }
+                        client.stop();
+                        this->uart.println(F("[INFO] Client Disconnected."));
+                    }
+                    delay(10);
+                }
+                server.end();
+            }
+            else
+            {
+                this->uart.println(F("[ERROR] Failed to start AP mode."));
+            }
         }
 
         this->led.off();

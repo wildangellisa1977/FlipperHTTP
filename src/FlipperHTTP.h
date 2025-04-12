@@ -35,6 +35,7 @@ Change Log:
 - 2025-03-25: Check if websocket is connected
 - 2025-03-26: Updated websocket setup
 - 2025-03-29: Created a WiFiUtils class to handle WiFi functions (wifi_utils.h/cpp)
+- 2025-04-12: Added AP mode support [WIFI/AP]
 */
 #pragma once
 #include "certs.h"
