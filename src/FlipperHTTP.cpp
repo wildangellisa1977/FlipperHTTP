@@ -3,11 +3,12 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over tthis->uart.
 Created: 2024-09-30
-Updated: 2025-03-29
+Updated: 2025-04-12
 */
 
 #include "FlipperHTTP.h"
 #include "storage.h"
+#include "wifi_ap.h"
 
 // Load WiFi settings from SPIFFS and attempt to connect
 bool FlipperHTTP::load_wifi()
@@ -1494,7 +1495,6 @@ void FlipperHTTP::loop()
         // [WIFI/AP] AP Mode
         else if (_data.startsWith("[WIFI/AP]"))
         {
-
             // Extract the JSON by removing the command part
             String jsonData = _data.substring(strlen("[WIFI/AP]"));
             jsonData.trim();
@@ -1516,71 +1516,20 @@ void FlipperHTTP::loop()
                 this->led.off();
                 return;
             }
+
             String ssid = doc["ssid"];
 
-            // Start AP mode
-            String ipAddress = this->wifi.connectAP(ssid.c_str());
-            if (ipAddress != "")
+            WiFiAP ap(&this->uart, &this->wifi);
+
+            if (!ap.start(ssid.c_str()))
             {
-                char buffer[64];
-                snprintf(buffer, sizeof(buffer), "[SUCCESS]{\"IP\":\"%s\"}", ipAddress.c_str());
-                this->uart.println(buffer);
-                this->uart.flush();
-
-                WiFiServer server(80);
-                server.begin();
-                this->uart.println(F("[INFO] AP mode started. Waiting for clients..."));
-
-                // Keep the server running until a [WIFI/AP/STOP] command is received via UART.
-                while (true)
-                {
-                    // Check for UART command to stop AP mode.
-                    if (this->uart.available())
-                    {
-                        String uartCmd = this->uart.read_serial_line();
-                        if (uartCmd.startsWith("[WIFI/AP/STOP]"))
-                        {
-                            this->uart.println(F("[INFO] Stopping AP mode."));
-                            break;
-                        }
-                    }
-
-                    // Check for an incoming client connection.
-                    WiFiClient client = server.available();
-                    if (client)
-                    {
-                        this->uart.println(F("[INFO] Client Connected."));
-                        String currentLine = "";
-                        while (client.connected())
-                        {
-                            if (client.available())
-                            {
-                                char c = client.read();
-                                if (c == '\n')
-                                {
-                                    // Send HTTP response.
-                                    client.println(F("HTTP/1.1 200 OK"));
-                                    client.println(F("Content-type:text/html"));
-                                    client.println();
-                                    client.println(F("<!DOCTYPE html><html>"));
-                                    client.println(F("<head><title>FlipperHTTP</title></head>"));
-                                    client.println(F("<body><h1>Welcome to FlipperHTTP AP Mode</h1></body>"));
-                                    client.println(F("</html>"));
-                                    break;
-                                }
-                            }
-                        }
-                        client.stop();
-                        this->uart.println(F("[INFO] Client Disconnected."));
-                    }
-                    delay(10);
-                }
-                server.end();
+                this->led.off();
+                return; // error is handled by class
             }
-            else
-            {
-                this->uart.println(F("[ERROR] Failed to start AP mode."));
-            }
+
+            this->uart.println(F("[AP/CONNECTED]"));
+            ap.run();
+            this->uart.println(F("[AP/DISCONNECTED]"));
         }
 
         this->led.off();
