@@ -1,13 +1,15 @@
 #include "wifi_ap.h"
 
+static const PROGMEM String wifiAPHeader = "HTTP/1.1 200 OK\r\n"
+                                           "Content-type:text/html\r\n"
+                                           "\r\n";
+
 WiFiAP::WiFiAP(UART *uartClass, WiFiUtils *wifiUtils) : ip(""),
                                                         uart(uartClass), wifi(wifiUtils),
                                                         isRunning(false)
 {
     // default html
-    this->html = "HTTP/1.1 200 OK\r\n";
-    this->html += "Content-type:text/html\r\n";
-    this->html += "\r\n";
+    this->html = wifiAPHeader;
     this->html += "<!DOCTYPE html><html>\r\n";
     this->html += "<head><title>FlipperHTTP</title></head>\r\n";
     this->html += "<body><h1>Welcome to FlipperHTTP AP Mode</h1></body>\r\n";
@@ -93,5 +95,6 @@ void WiFiAP::run()
 }
 void WiFiAP::updateHTML(String html)
 {
-    this->html = html; // Update the HTML content
+    this->html = wifiAPHeader; // Reset the HTML header
+    this->html += html;        // Update the HTML content
 }
