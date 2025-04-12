@@ -112,7 +112,7 @@ String FlipperHTTP::request(
     }
 
     // Clear serial buffer to avoid any residual data
-    this->this->uart.clear_buffer();
+    this->uart.clear_buffer();
 
     return response;
 }

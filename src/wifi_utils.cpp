@@ -11,11 +11,12 @@ bool WiFiUtils::connect(const char *ssid, const char *password)
     // Ensure WiFi is disconnected attempting to connect
 #ifndef BOARD_BW16
     WiFi.disconnect(true);
-#else
-    WiFi.disconnect();
-#endif
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
+#else
+    WiFi.disconnect();
+    WiFi.begin((char *)ssid, password);
+#endif
 #ifdef BOARD_ESP32_C3
     WiFi.setTxPower(WIFI_POWER_8_5dBm);
 #endif
@@ -51,13 +52,16 @@ String WiFiUtils::connectAP(const char *ssid)
     WiFi.disconnect(true);
 #else
     WiFi.disconnect();
+    WiFi.apbegin((char *)ssid, "", "1");
 #endif
-    WiFi.mode(WIFI_AP);
-    WiFi.softAP(ssid);
 #ifdef BOARD_ESP32_C3
     WiFi.setTxPower(WIFI_POWER_8_5dBm);
 #endif
+#ifndef BOARD_BW16
     return WiFi.softAPIP().toString();
+#else
+    return WiFi.localIP().get_address();
+#endif
 }
 
 String WiFiUtils::device_ip()
