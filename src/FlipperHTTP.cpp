@@ -799,6 +799,9 @@ void FlipperHTTP::loop()
                 return;
             }
             this->uart.println(doc["origin"].as<String>());
+            this->uart.flush();
+            this->uart.println();
+            this->uart.println(F("[GET/END]"));
         }
         // Ping/Pong to see if board/flipper is connected
         else if (_data.startsWith("[PING]"))
