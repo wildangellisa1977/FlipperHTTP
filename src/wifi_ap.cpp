@@ -66,6 +66,7 @@ void WiFiAP::run()
         WiFiClient client = server.available(); // Check for incoming client
         if (client)
         {
+            this->uart->println(F("[INFO] Client Connected."));
             String currentLine = "";
             while (client.connected())
             {
