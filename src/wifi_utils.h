@@ -22,4 +22,6 @@ public:
     void disconnect();                                    // Disconnect from WiFi
     bool isConnected();                                   // Check if connected to WiFi
     String scan();                                        // Scan for available WiFi networks
+private:
+    bool connectHelper(const char *ssid, const char *password, bool isAP = false); // Helper function to connect to WiFi
 };
