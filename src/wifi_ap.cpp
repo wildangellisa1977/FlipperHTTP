@@ -47,7 +47,7 @@ void WiFiAP::run()
         // Check for UART command to stop AP mode.
         if (this->uart->available())
         {
-            String uartCmd = this->uart->read_serial_line();
+            String uartCmd = this->uart->readSerialLine();
             // if starts with [WIFI/AP/STOP] then stop AP mode
             if (uartCmd.startsWith("[WIFI/AP/STOP]"))
             {
@@ -58,9 +58,12 @@ void WiFiAP::run()
             // if starts with [WIFI/AP/UPDATE] then update the HTML
             else if (uartCmd.startsWith("[WIFI/AP/UPDATE]"))
             {
-                String html = uartCmd.substring(strlen("[WIFI/AP/UPDATE]"));
-                html.trim(); // Remove leading and trailing whitespace
-                this->updateHTML(html);
+                this->uart->println("DEBUG: Update command");
+                String uartHTML = this->uart->readStringUntilString("[WIFI/AP/UPDATE/END]");
+                uartHTML.trim();
+                this->uart->println("DEBUG: Received HTML update:");
+                this->uart->println(uartHTML);
+                this->updateHTML(uartHTML);
             }
         }
 
@@ -68,27 +71,21 @@ void WiFiAP::run()
         if (client)
         {
             this->uart->println(F("[INFO] Client Connected."));
-            String currentLine = "";
             while (client.connected())
             {
                 if (client.available())
                 {
-                    char c = client.read();
-                    if (c == '\n')
+                    String line = client.readStringUntil('\n');
+                    if (line == "\r")
                     {
-                        // Send the HTML content to the client
+                        // End of HTTP headers; now send the response
                         client.println(this->html);
                         break;
                     }
-                    else
-                    {
-                        currentLine += c; // Append character to current line
-                    }
                 }
             }
-            this->uart->println(currentLine); // Print the received line
-            this->uart->flush();              // Flush the UART buffer
-            client.stop();                    // Stop the client connection
+            this->uart->flush(); // Flush the UART buffer
+            client.stop();       // Stop the client connection
         }
         delay(10);
     }
