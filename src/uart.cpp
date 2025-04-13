@@ -103,7 +103,43 @@ uint8_t UART::readBytes(uint8_t *buffer, size_t size)
 #endif
 }
 
-String UART::read_serial_line()
+String UART::readStringUntilString(String terminator)
+{
+    String receivedData = "";
+    unsigned long lastDataTime = millis();
+
+    while (true)
+    {
+        // If no new line is received in the last 5 seconds, exit the loop
+        if (millis() - lastDataTime >= 5000)
+        {
+            break;
+        }
+
+        // Read a line from serial input
+        String line = this->readSerialLine();
+        if (line.length() > 0)
+        {
+            receivedData += line;
+            lastDataTime = millis();
+
+            // Check if the terminator exists in the accumulated data
+            int termIndex = receivedData.indexOf(terminator);
+            if (termIndex != -1)
+            {
+                // Remove the terminator and any subsequent data
+                receivedData = receivedData.substring(0, termIndex);
+                break;
+            }
+        }
+        delay(1);
+    }
+
+    receivedData.trim();
+    return receivedData;
+}
+
+String UART::readSerialLine()
 {
     String receivedData = "";
 

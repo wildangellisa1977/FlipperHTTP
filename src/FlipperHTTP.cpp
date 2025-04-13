@@ -709,13 +709,13 @@ void FlipperHTTP::loop()
         this->led.on();
 
         // Read the incoming serial data until newline
-        String _data = this->uart.read_serial_line();
+        String _data = this->uart.readSerialLine();
 
         // send to ESP32
         this->uart_2.println(_data);
 
         // Wait for response from ESP32
-        String _response = this->uart_2.read_serial_line();
+        String _response = this->uart_2.readSerialLine();
 
         // Send response back to Flipper
         this->uart.println(_response);
@@ -727,7 +727,7 @@ void FlipperHTTP::loop()
         this->led.on();
 
         // Read the incoming serial data until newline
-        String _data = this->uart_2.read_serial_line();
+        String _data = this->uart_2.readSerialLine();
 
         // send to Flipper
         this->uart.println(_data);
@@ -739,7 +739,7 @@ void FlipperHTTP::loop()
     if (this->uart.available())
     {
         // Read the incoming serial data until newline
-        String _data = this->uart.read_serial_line();
+        String _data = this->uart.readSerialLine();
 
         if (_data.length() == 0)
         {
@@ -1473,7 +1473,7 @@ void FlipperHTTP::loop()
                 if (this->uart.available() > 0)
                 {
                     // Read the incoming serial data until newline
-                    uartMessage = this->uart.read_serial_line();
+                    uartMessage = this->uart.readSerialLine();
                     ws.beginMessage(TYPE_TEXT);
                     ws.print(uartMessage);
                     ws.endMessage();
