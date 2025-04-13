@@ -59,6 +59,7 @@ void WiFiAP::run()
             else if (uartCmd.startsWith("[WIFI/AP/UPDATE]"))
             {
                 String html = uartCmd.substring(strlen("[WIFI/AP/UPDATE]"));
+                html.trim(); // Remove leading and trailing whitespace
                 this->updateHTML(html);
             }
         }
