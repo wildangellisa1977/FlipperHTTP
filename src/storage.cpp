@@ -93,13 +93,16 @@ bool StorageManager::serialize(JsonDocument &doc, const char *filename)
     {
         serializeJson(doc, file);
         file.close();
+        return true;
     }
+    return false;
 #else
     /*We will keep all data at the same address and overwrite for now*/
     char buffer[512];
     size_t len = serializeJson(doc, buffer, sizeof(buffer));
     buffer[len] = '\0'; // Null-terminate the string
     FlashStorage.put(0, buffer);
+    return true;
 #endif
 }
 
@@ -110,6 +113,7 @@ bool StorageManager::write(const char *filename, const char *data)
 #elif !defined(BOARD_BW16)
     File file = SPIFFS.open(filename, FILE_WRITE);
 #endif
+
 #ifndef BOARD_BW16
     if (file)
     {
@@ -117,9 +121,10 @@ bool StorageManager::write(const char *filename, const char *data)
         file.close();
         return true;
     }
+    return false;
 #else
     /*We will keep all data at the same address and overwrite for now*/
     FlashStorage.put(0, data);
+    return true;
 #endif
-    return false;
 }
