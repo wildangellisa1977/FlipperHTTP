@@ -1356,8 +1356,8 @@ void FlipperHTTP::loop()
             String jsonData = _data.substring(strlen("[SOCKET/START]"));
             jsonData.trim();
 
-            // Create a DynamicJsonDocument with an appropriate size
-            DynamicJsonDocument doc(1024);
+            // Create a JsonDocument with an appropriate size
+            JsonDocument doc;
             DeserializationError error = deserializeJson(doc, jsonData);
 
             if (error)
