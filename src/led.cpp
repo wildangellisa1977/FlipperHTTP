@@ -1,11 +1,11 @@
 #include "led.h"
 
-#ifndef BOARD_BW16
-#define LED_ON LOW
-#define LED_OFF HIGH
-#else
+#if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM) || defined(BOARD_BW16)
 #define LED_ON HIGH
 #define LED_OFF LOW
+#else
+#define LED_ON LOW
+#define LED_OFF HIGH
 #endif
 
 #ifdef BOARD_ESP32_C6

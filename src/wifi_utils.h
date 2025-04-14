@@ -16,10 +16,12 @@ public:
     WiFiUtils()
     {
     }
-
     bool connect(const char *ssid, const char *password); // Connect to WiFi using the provided SSID and password
+    String connectAP(const char *ssid);                   // Connect to WiFi in AP mode and return the IP address
     String device_ip();                                   // Get IP address of the device
     void disconnect();                                    // Disconnect from WiFi
-    bool is_connected();                                  // Check if connected to WiFi
+    bool isConnected();                                   // Check if connected to WiFi
     String scan();                                        // Scan for available WiFi networks
+private:
+    bool connectHelper(const char *ssid, const char *password, bool isAP = false); // Helper function to connect to WiFi
 };

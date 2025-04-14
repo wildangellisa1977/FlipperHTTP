@@ -1,6 +1,6 @@
 #include "storage.h"
 
-bool file_begin()
+bool StorageManager::begin()
 {
 #if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
     if (!LittleFS.begin())
@@ -19,15 +19,11 @@ bool file_begin()
     // no begin needed
     return true;
 #else
-    if (!SPIFFS.begin(true))
-    {
-        return false;
-    }
-    return true;
+    return SPIFFS.begin(true);
 #endif
 }
 
-void file_deserialize(JsonDocument &doc, const char *filename)
+bool StorageManager::deserialize(JsonDocument &doc, const char *filename)
 {
 #if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
     File file = LittleFS.open(filename, "r");
@@ -35,19 +31,31 @@ void file_deserialize(JsonDocument &doc, const char *filename)
     File file = SPIFFS.open(filename, FILE_READ);
 #endif
 #ifndef BOARD_BW16
-    deserializeJson(doc, file);
+    DeserializationError error = deserializeJson(doc, file);
     file.close();
+    return !error; // return no error
 #else
     /*We will keep all data at the same address and overwrite for now*/
-    int bw16_flash_address = sizeof(filename); // Location we want the data to be put.
     char buffer[512];
-    FlashStorage.get(bw16_flash_address, buffer);
+    FlashStorage.get(0, buffer);
     buffer[sizeof(buffer) - 1] = '\0'; // Null-terminate the string
-    deserializeJson(doc, buffer);
+    DeserializationError error = deserializeJson(doc, buffer);
+    return !error; // return no error
 #endif
 }
 
-String file_read(const char *filename)
+size_t StorageManager::freeHeap()
+{
+#if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
+    return rp2040.getFreeHeap();
+#elif defined(BOARD_BW16)
+    return os_get_free_heap_size_arduino();
+#else
+    return ESP.getFreeHeap();
+#endif
+}
+
+String StorageManager::read(const char *filename)
 {
     String fileContent = "";
 #if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
@@ -64,13 +72,16 @@ String file_read(const char *filename)
     }
 #else
     /*We will keep all data at the same address and overwrite for now*/
-    int bw16_flash_address = sizeof(filename); // Location we want the data to be put.
-    FlashStorage.get(bw16_flash_address, fileContent);
+    // we wrote in char so we need to read in char, then convert to string
+    char buffer[512];
+    FlashStorage.get(0, buffer);
+    buffer[sizeof(buffer) - 1] = '\0'; // Null-terminate the string
+    fileContent = String(buffer);
 #endif
     return fileContent;
 }
 
-void file_serialize(JsonDocument &doc, const char *filename)
+bool StorageManager::serialize(JsonDocument &doc, const char *filename)
 {
 #if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
     File file = LittleFS.open(filename, "w");
@@ -82,24 +93,27 @@ void file_serialize(JsonDocument &doc, const char *filename)
     {
         serializeJson(doc, file);
         file.close();
+        return true;
     }
+    return false;
 #else
     /*We will keep all data at the same address and overwrite for now*/
-    int bw16_flash_address = sizeof(filename); // Location we want the data to be put.
     char buffer[512];
     size_t len = serializeJson(doc, buffer, sizeof(buffer));
     buffer[len] = '\0'; // Null-terminate the string
-    FlashStorage.put(bw16_flash_address, buffer);
+    FlashStorage.put(0, buffer);
+    return true;
 #endif
 }
 
-bool file_write(const char *filename, const char *data)
+bool StorageManager::write(const char *filename, const char *data)
 {
 #if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
     File file = LittleFS.open(filename, "w");
 #elif !defined(BOARD_BW16)
     File file = SPIFFS.open(filename, FILE_WRITE);
 #endif
+
 #ifndef BOARD_BW16
     if (file)
     {
@@ -107,21 +121,10 @@ bool file_write(const char *filename, const char *data)
         file.close();
         return true;
     }
+    return false;
 #else
     /*We will keep all data at the same address and overwrite for now*/
-    int bw16_flash_address = sizeof(filename); // Location we want the data to be put.
-    FlashStorage.put(bw16_flash_address, data);
-#endif
-    return false;
-}
-
-size_t free_heap()
-{
-#if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
-    return rp2040.getFreeHeap();
-#elif defined(BOARD_BW16)
-    return os_get_free_heap_size_arduino();
-#else
-    return ESP.getFreeHeap();
+    FlashStorage.put(0, data);
+    return true;
 #endif
 }

@@ -964,6 +964,7 @@ bool flipper_http_send_command(FlipperHTTP *fhttp, HTTPCommand command)
     case HTTP_CMD_IP_WIFI:
         return flipper_http_send_data(fhttp, "[WIFI/IP]");
     case HTTP_CMD_SCAN:
+        fhttp->method = GET;
         return flipper_http_send_data(fhttp, "[WIFI/SCAN]");
     case HTTP_CMD_LIST_COMMANDS:
         return flipper_http_send_data(fhttp, "[LIST]");

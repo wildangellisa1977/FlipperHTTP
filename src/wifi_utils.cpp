@@ -1,34 +1,58 @@
 #include "wifi_utils.h"
 
-bool WiFiUtils::connect(const char *ssid, const char *password)
+bool WiFiUtils::connectHelper(const char *ssid, const char *password, bool isAP)
 {
-    // Check if the provided SSID and password are not empty
-    if (strlen(ssid) == 0 || strlen(password) == 0)
+    if (isAP && strlen(ssid) == 0)
     {
         return false;
     }
-
-    // Ensure WiFi is disconnected attempting to connect
+    if (!isAP && (strlen(ssid) == 0 || strlen(password) == 0))
+    {
+        return false;
+    }
 #ifndef BOARD_BW16
     WiFi.disconnect(true);
 #else
     WiFi.disconnect();
 #endif
-    WiFi.begin(ssid, password);
+    if (isAP)
+    {
+#ifndef BOARD_BW16
+        WiFi.mode(WIFI_AP);
+        WiFi.softAP(ssid);
+#else
+        WiFi.apbegin((char *)ssid, "", "1");
+#endif
+    }
+    else
+    {
+#ifndef BOARD_BW16
+        WiFi.mode(WIFI_STA);
+        WiFi.begin(ssid, password);
+#else
+        WiFi.begin((char *)ssid, password);
+#endif
+    }
 #ifdef BOARD_ESP32_C3
     WiFi.setTxPower(WIFI_POWER_8_5dBm);
 #endif
-
-    // Attempt to connect to WiFi
-    int i = 0;
-    while (!this->is_connected() && i < 20)
+    if (!isAP)
     {
-        delay(500);
-        i++;
+        int i = 0;
+        while (!this->isConnected() && i < 20)
+        {
+            delay(500);
+            i++;
+        }
+        return this->isConnected();
     }
+    return true;
+}
 
-    // return connection status and get UTC time via NTP
-    if (this->is_connected())
+bool WiFiUtils::connect(const char *ssid, const char *password)
+{
+    if (this->connectHelper(ssid, password))
+    // Set the time zone to UTC+0
     {
 #ifndef BOARD_BW16
         configTime(0, 0, "pool.ntp.org", "time.nist.gov");
@@ -36,6 +60,19 @@ bool WiFiUtils::connect(const char *ssid, const char *password)
         return true;
     }
     return false;
+}
+
+String WiFiUtils::connectAP(const char *ssid)
+{
+    if (!this->connectHelper(ssid, "", true))
+    {
+        return "";
+    }
+#ifndef BOARD_BW16
+    return WiFi.softAPIP().toString();
+#else
+    return WiFi.localIP().get_address();
+#endif
 }
 
 String WiFiUtils::device_ip()
@@ -56,7 +93,7 @@ void WiFiUtils::disconnect()
 #endif
 }
 
-bool WiFiUtils::is_connected()
+bool WiFiUtils::isConnected()
 {
     return WiFi.status() == WL_CONNECTED;
 }

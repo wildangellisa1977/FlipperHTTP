@@ -3,7 +3,7 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over serial.
 Created: 2024-09-30
-Updated: 2025-03-29
+Updated: 2025-04-12
 
 Change Log:
 - 2024-09-30: Initial commit
@@ -35,6 +35,7 @@ Change Log:
 - 2025-03-25: Check if websocket is connected
 - 2025-03-26: Updated websocket setup
 - 2025-03-29: Created a WiFiUtils class to handle WiFi functions (wifi_utils.h/cpp)
+- 2025-04-12: Added AP mode support [WIFI/AP] (wifi_ap.h/cpp)
 */
 #pragma once
 #include "certs.h"
@@ -46,6 +47,7 @@ Change Log:
 #include <ArduinoHttpClient.h>
 #include <stdint.h>
 #include <string.h>
+#include "storage.h"
 
 #define BAUD_RATE 115200
 
@@ -92,8 +94,8 @@ private:
 #else
     UART uart; // UART object to handle serial communication
 #endif
-
-    WiFiUtils wifi; // WiFiUtils object to handle WiFi connections
+    WiFiUtils wifi;         // WiFiUtils object to handle WiFi connections
+    StorageManager storage; // StorageManager object to handle storage operations
 };
 
 const PROGMEM char settingsFilePath[] = "/flipper-http.json"; // Path to the settings file in the SPIFFS file system
