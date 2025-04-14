@@ -47,6 +47,7 @@ Change Log:
 #include <ArduinoHttpClient.h>
 #include <stdint.h>
 #include <string.h>
+#include "storage.h"
 
 #define BAUD_RATE 115200
 
@@ -93,8 +94,8 @@ private:
 #else
     UART uart; // UART object to handle serial communication
 #endif
-
-    WiFiUtils wifi; // WiFiUtils object to handle WiFi connections
+    WiFiUtils wifi;         // WiFiUtils object to handle WiFi connections
+    StorageManager storage; // StorageManager object to handle storage operations
 };
 
 const PROGMEM char settingsFilePath[] = "/flipper-http.json"; // Path to the settings file in the SPIFFS file system

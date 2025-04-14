@@ -7,17 +7,13 @@ Updated: 2025-04-12
 */
 
 #include "FlipperHTTP.h"
-#include "storage.h"
 #include "wifi_ap.h"
 
 // Load WiFi settings from SPIFFS and attempt to connect
 bool FlipperHTTP::load_wifi()
 {
-    String fileContent = file_read(settingsFilePath);
     JsonDocument doc;
-    DeserializationError error = deserializeJson(doc, fileContent);
-
-    if (error)
+    if (!storage.deserialize(doc, settingsFilePath))
     {
         return false;
     }
@@ -37,7 +33,6 @@ bool FlipperHTTP::load_wifi()
             return true;
         }
     }
-
     return false;
 }
 
@@ -218,18 +213,18 @@ bool FlipperHTTP::save_wifi(String jsonData)
     const char *newSSID = doc["ssid"];
     const char *newPassword = doc["password"];
 
-    // Load existing settings if they exist
-    JsonDocument existingDoc;
-    file_deserialize(existingDoc, settingsFilePath);
+    bool found = false; // Check if SSID is already saved
 
-    // Check if SSID is already saved
-    bool found = false;
-    for (JsonObject wifi : existingDoc["wifi_list"].as<JsonArray>())
+    JsonDocument existingDoc; // Load existing settings if they exist
+    if (storage.deserialize(existingDoc, settingsFilePath))
     {
-        if (wifi["ssid"] == newSSID)
+        for (JsonObject wifi : existingDoc["wifi_list"].as<JsonArray>())
         {
-            found = true;
-            break;
+            if (wifi["ssid"] == newSSID)
+            {
+                found = true;
+                break;
+            }
         }
     }
 
@@ -242,7 +237,7 @@ bool FlipperHTTP::save_wifi(String jsonData)
         newWifi["password"] = newPassword;
 
         // Save updated list to file
-        file_serialize(existingDoc, settingsFilePath);
+        storage.serialize(existingDoc, settingsFilePath);
     }
 
     this->uart.print(F("[SUCCESS] Settings saved."));
@@ -256,63 +251,29 @@ void FlipperHTTP::setup()
 #endif
     this->uart.begin(115200);
     this->uart.set_timeout(5000);
-#if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W)
-    if (!LittleFS.begin())
-    {
-        if (LittleFS.format())
-        {
-            if (!LittleFS.begin())
-            {
-                this->uart.println(F("Failed to re-mount LittleFS after formatting."));
-                rp2040.reboot();
-            }
-        }
-        else
-        {
-            this->uart.println(F("File system formatting failed."));
-            rp2040.reboot();
-        }
-    }
-#elif defined(BOARD_VGM)
+#if defined(BOARD_VGM)
     this->uart_2.set_pins(24, 21);
     this->uart_2.begin(115200);
     this->uart_2.set_timeout(5000);
-    if (!LittleFS.begin())
-    {
-        if (LittleFS.format())
-        {
-            if (!LittleFS.begin())
-            {
-                this->uart.println(F("Failed to re-mount LittleFS after formatting."));
-                rp2040.reboot();
-            }
-        }
-        else
-        {
-            this->uart.println(F("File system formatting failed."));
-            rp2040.reboot();
-        }
-    }
     this->uart_2.flush();
-#elif defined(BOARD_BW16)
-    // skip for now
-#else
-    // Initialize SPIFFS
-    if (!SPIFFS.begin(true))
-    {
-        this->uart.println(F("[ERROR] SPIFFS initialization failed."));
-        ESP.restart();
-    }
 #endif
     this->use_led = true;
     this->led.start();
-    this->load_wifi(); // Load WiFi settings from SPIFFS
+    if (!storage.begin())
+    {
+        this->uart.println(F("[ERROR] Storage initialization failed."));
+    }
+    else
+    {
+        this->load_wifi(); // Load WiFi settings
+    }
 #ifndef BOARD_BW16
     this->client.setCACert(root_ca);
 #else
     this->client.setRootCA((unsigned char *)root_ca);
 #endif
     this->uart.flush();
+    this->led.off();
 }
 
 #ifdef BOARD_BW16
@@ -361,7 +322,7 @@ bool FlipperHTTP::stream_bytes(const char *method, String url, String payload, c
 
             WiFiClient *stream = http.getStreamPtr();
 
-            size_t freeHeap = free_heap();        // Check available heap memory before starting
+            size_t freeHeap = storage.freeHeap(); // Check available heap memory before starting
             const size_t minHeapThreshold = 1024; // Minimum heap space to avoid overflow
             if (freeHeap < minHeapThreshold)
             {
@@ -400,7 +361,7 @@ bool FlipperHTTP::stream_bytes(const char *method, String url, String payload, c
                 }
                 delay(1); // Yield control to the system
             }
-            freeHeap = free_heap(); // Check available heap memory after processing
+            freeHeap = storage.freeHeap(); // Check available heap memory after processing
             if (freeHeap < minHeapThreshold)
             {
                 this->uart.println(F("[ERROR] Not enough memory to continue processing the response."));
@@ -451,7 +412,7 @@ bool FlipperHTTP::stream_bytes(const char *method, String url, String payload, c
                         WiFiClient *stream = http.getStreamPtr();
 
                         // Check available heap memory before starting
-                        size_t freeHeap = free_heap();
+                        size_t freeHeap = storage.freeHeap();
                         if (freeHeap < 1024)
                         {
                             this->uart.println(F("[ERROR] Not enough memory to start processing the response."));
@@ -491,7 +452,7 @@ bool FlipperHTTP::stream_bytes(const char *method, String url, String payload, c
                             delay(1); // Yield control to the system
                         }
 
-                        freeHeap = free_heap(); // Check available heap memory after processing
+                        freeHeap = storage.freeHeap(); // Check available heap memory after processing
                         if (freeHeap < 1024)
                         {
                             this->uart.println(F("[ERROR] Not enough memory to continue processing the response."));
@@ -833,7 +794,7 @@ void FlipperHTTP::loop()
         // Handle Wifi list command
         else if (_data.startsWith("[WIFI/LIST]"))
         {
-            String fileContent = file_read(settingsFilePath);
+            String fileContent = storage.read(settingsFilePath);
             this->uart.println(fileContent);
             this->uart.flush();
         }
