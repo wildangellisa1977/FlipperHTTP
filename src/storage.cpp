@@ -39,9 +39,8 @@ void file_deserialize(JsonDocument &doc, const char *filename)
     file.close();
 #else
     /*We will keep all data at the same address and overwrite for now*/
-    int bw16_flash_address = sizeof(filename); // Location we want the data to be put.
     char buffer[512];
-    FlashStorage.get(bw16_flash_address, buffer);
+    FlashStorage.get(0, buffer);
     buffer[sizeof(buffer) - 1] = '\0'; // Null-terminate the string
     deserializeJson(doc, buffer);
 #endif
@@ -64,8 +63,7 @@ String file_read(const char *filename)
     }
 #else
     /*We will keep all data at the same address and overwrite for now*/
-    int bw16_flash_address = sizeof(filename); // Location we want the data to be put.
-    FlashStorage.get(bw16_flash_address, fileContent);
+    FlashStorage.get(0, fileContent);
 #endif
     return fileContent;
 }
@@ -85,11 +83,10 @@ void file_serialize(JsonDocument &doc, const char *filename)
     }
 #else
     /*We will keep all data at the same address and overwrite for now*/
-    int bw16_flash_address = sizeof(filename); // Location we want the data to be put.
     char buffer[512];
     size_t len = serializeJson(doc, buffer, sizeof(buffer));
     buffer[len] = '\0'; // Null-terminate the string
-    FlashStorage.put(bw16_flash_address, buffer);
+    FlashStorage.put(0, buffer);
 #endif
 }
 
@@ -109,8 +106,7 @@ bool file_write(const char *filename, const char *data)
     }
 #else
     /*We will keep all data at the same address and overwrite for now*/
-    int bw16_flash_address = sizeof(filename); // Location we want the data to be put.
-    FlashStorage.put(bw16_flash_address, data);
+    FlashStorage.put(0, data);
 #endif
     return false;
 }
