@@ -5,6 +5,9 @@
 class UART
 {
 public:
+    UART()
+    {
+    }
     size_t available();
     void begin(uint32_t baudrate);
     void flush();
