@@ -496,7 +496,7 @@ bool FlipperHTTP::stream_bytes(const char *method, String url, String payload, c
 }
 #endif
 
-bool FlipperHTTP::read_serial_settings(String receivedData, bool connectAfterSave)
+bool FlipperHTTP::readSerialSettings(String receivedData, bool connectAfterSave)
 {
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, receivedData);
@@ -806,7 +806,7 @@ void FlipperHTTP::loop()
             jsonData.trim(); // Remove any leading/trailing whitespace
 
             // Parse and save the settings
-            if (this->read_serial_settings(jsonData, true))
+            if (this->readSerialSettings(jsonData, true))
             {
                 this->uart.println(F("[SUCCESS] Wifi settings saved."));
             }

@@ -73,7 +73,7 @@ public:
     bool save_wifi(String data);                                                                                                             // Save and Load settings to and from storage
     void setup();                                                                                                                            // Arduino setup function
     bool stream_bytes(const char *method, String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize); // Stream bytes from server
-    bool read_serial_settings(String receivedData, bool connectAfterSave);                                                                   // Read the serial data and save the settings
+    bool readSerialSettings(String receivedData, bool connectAfterSave);                                                                     // Read the serial data and save the settings
     bool upload_bytes(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize);                     // stream bytes to server
 
     void loop(); // Main loop for flipper-http.ino that handles all of the commands
