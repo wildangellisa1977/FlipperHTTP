@@ -26,7 +26,7 @@ void UART::begin(uint32_t baudrate)
 #endif
 }
 
-void UART::clear_buffer()
+void UART::clearBuffer()
 {
     while (this->available() > 0)
     {

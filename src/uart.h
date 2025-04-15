@@ -8,7 +8,7 @@ public:
     size_t available();
     void begin(uint32_t baudrate);
     void flush();
-    void clear_buffer();
+    void clearBuffer();
     void print(String str);
     void printf(const char *format, ...);
     void println(String str = "");
