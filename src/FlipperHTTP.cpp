@@ -277,10 +277,10 @@ void FlipperHTTP::setup()
 }
 
 #ifdef BOARD_BW16
-bool FlipperHTTP::stream_bytes(const char *method, String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize)
+bool FlipperHTTP::streamBytes(const char *method, String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize)
 {
     // Not implemented for BW16
-    this->uart.print(F("[ERROR] stream_bytes not implemented for BW16."));
+    this->uart.print(F("[ERROR] streamBytes not implemented for BW16."));
     this->uart.print(method);
     this->uart.print(url);
     this->uart.print(payload);
@@ -293,7 +293,7 @@ bool FlipperHTTP::stream_bytes(const char *method, String url, String payload, c
     return false;
 }
 #else
-bool FlipperHTTP::stream_bytes(const char *method, String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize)
+bool FlipperHTTP::streamBytes(const char *method, String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize)
 {
     HTTPClient http;
 
@@ -1176,7 +1176,7 @@ void FlipperHTTP::loop()
             }
 
             // GET request
-            if (!this->stream_bytes("GET", url, "", headerKeys, headerValues, headerSize))
+            if (!this->streamBytes("GET", url, "", headerKeys, headerValues, headerSize))
             {
                 this->uart.println(F("[ERROR] GET request failed or returned empty data."));
             }
@@ -1232,7 +1232,7 @@ void FlipperHTTP::loop()
             }
 
             // POST request
-            if (!this->stream_bytes("POST", url, payload, headerKeys, headerValues, headerSize))
+            if (!this->streamBytes("POST", url, payload, headerKeys, headerValues, headerSize))
             {
                 this->uart.println(F("[ERROR] POST request failed or returned empty data."));
             }
