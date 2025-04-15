@@ -75,7 +75,7 @@ String WiFiUtils::connectAP(const char *ssid)
 #endif
 }
 
-String WiFiUtils::device_ip()
+String WiFiUtils::deviceIP()
 {
 #ifndef BOARD_BW16
     return WiFi.localIP().toString();

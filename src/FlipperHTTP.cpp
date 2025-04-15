@@ -728,7 +728,7 @@ void FlipperHTTP::loop()
         // handle [IP/ADDRESS] command (local IP)
         else if (_data.startsWith("[IP/ADDRESS]"))
         {
-            this->uart.println(this->wifi.device_ip());
+            this->uart.println(this->wifi.deviceIP());
         }
         // handle [WIFI/IP] command ip of connected wifi
         else if (_data.startsWith("[WIFI/IP]"))
