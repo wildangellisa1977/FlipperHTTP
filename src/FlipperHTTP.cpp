@@ -538,10 +538,10 @@ bool FlipperHTTP::readSerialSettings(String receivedData, bool connectAfterSave)
 
 // Upload bytes to server
 #ifdef BOARD_BW16
-bool FlipperHTTP::upload_bytes(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize)
+bool FlipperHTTP::uploadBytes(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize)
 {
     // Not implemented for BW16 yet
-    this->uart.print(F("[ERROR] upload_bytes not implemented for BW16."));
+    this->uart.print(F("[ERROR] uploadBytes not implemented for BW16."));
     this->uart.print(url);
     this->uart.print(payload);
     for (int i = 0; i < headerSize; i++)
@@ -553,7 +553,7 @@ bool FlipperHTTP::upload_bytes(String url, String payload, const char *headerKey
     return false;
 }
 #else
-bool FlipperHTTP::upload_bytes(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize)
+bool FlipperHTTP::uploadBytes(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize)
 {
     HTTPClient http;
 

@@ -74,7 +74,7 @@ public:
     void setup();                                                                                                                           // Arduino setup function
     bool streamBytes(const char *method, String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize); // Stream bytes from server
     bool readSerialSettings(String receivedData, bool connectAfterSave);                                                                    // Read the serial data and save the settings
-    bool upload_bytes(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize);                    // stream bytes to server
+    bool uploadBytes(String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize);                     // stream bytes to server
 
     void loop(); // Main loop for flipper-http.ino that handles all of the commands
 private:
