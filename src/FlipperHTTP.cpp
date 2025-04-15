@@ -200,7 +200,7 @@ String FlipperHTTP::request(
 #endif
 
 // Save WiFi settings to storage
-bool FlipperHTTP::save_wifi(String jsonData)
+bool FlipperHTTP::saveWiFi(String jsonData)
 {
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, jsonData);
@@ -521,7 +521,7 @@ bool FlipperHTTP::readSerialSettings(String receivedData, bool connectAfterSave)
     }
 
     // Save to storage
-    if (!this->save_wifi(receivedData))
+    if (!this->saveWiFi(receivedData))
     {
         this->uart.println(F("[ERROR] Failed to save settings to file."));
         return false;

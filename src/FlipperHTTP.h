@@ -70,7 +70,7 @@ public:
         int headerSize = 0                    // Number of headers
     );
     //
-    bool save_wifi(String data);                                                                                                             // Save and Load settings to and from storage
+    bool saveWiFi(String data);                                                                                                              // Save and Load settings to and from storage
     void setup();                                                                                                                            // Arduino setup function
     bool stream_bytes(const char *method, String url, String payload, const char *headerKeys[], const char *headerValues[], int headerSize); // Stream bytes from server
     bool readSerialSettings(String receivedData, bool connectAfterSave);                                                                     // Read the serial data and save the settings
