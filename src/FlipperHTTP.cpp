@@ -250,11 +250,11 @@ void FlipperHTTP::setup()
     this->uart.set_pins(0, 1);
 #endif
     this->uart.begin(115200);
-    this->uart.set_timeout(5000);
+    this->uart.setTimeout(5000);
 #if defined(BOARD_VGM)
     this->uart_2.set_pins(24, 21);
     this->uart_2.begin(115200);
-    this->uart_2.set_timeout(5000);
+    this->uart_2.setTimeout(5000);
     this->uart_2.flush();
 #endif
     this->use_led = true;
