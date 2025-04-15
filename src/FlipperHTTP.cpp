@@ -10,7 +10,7 @@ Updated: 2025-04-12
 #include "wifi_ap.h"
 
 // Load WiFi settings from SPIFFS and attempt to connect
-bool FlipperHTTP::load_wifi()
+bool FlipperHTTP::loadWiFi()
 {
     JsonDocument doc;
     if (!storage.deserialize(doc, settingsFilePath))
@@ -265,7 +265,7 @@ void FlipperHTTP::setup()
     }
     else
     {
-        this->load_wifi(); // Load WiFi settings
+        this->loadWiFi(); // Load WiFi settings
     }
 #ifndef BOARD_BW16
     this->client.setCACert(root_ca);

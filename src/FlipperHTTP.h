@@ -59,7 +59,7 @@ public:
     {
     }
 
-    bool load_wifi(); // Load Wifi settings from storage
+    bool loadWiFi(); // Load Wifi settings from storage
     //
     String request(
         const char *method,                   // HTTP method
