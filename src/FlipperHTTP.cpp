@@ -509,7 +509,7 @@ bool FlipperHTTP::read_serial_settings(String receivedData, bool connectAfterSav
     }
 
     // Extract values from JSON
-    if (doc.containsKey("ssid") && doc.containsKey("password"))
+    if (doc["ssid"] && doc["password"])
     {
         strncpy(loaded_ssid, doc["ssid"], sizeof(loaded_ssid));     // save ssid
         strncpy(loaded_pass, doc["password"], sizeof(loaded_pass)); // save password
@@ -754,7 +754,7 @@ void FlipperHTTP::loop()
                 this->led.off();
                 return;
             }
-            if (!doc.containsKey("origin"))
+            if (!doc["origin"])
             {
                 this->uart.println(F("[ERROR] JSON does not contain origin."));
                 this->led.off();
@@ -895,7 +895,7 @@ void FlipperHTTP::loop()
             }
 
             // Extract values from JSON
-            if (!doc.containsKey("url"))
+            if (!doc["url"])
             {
                 this->uart.println(F("[ERROR] JSON does not contain url."));
                 this->led.off();
@@ -908,7 +908,7 @@ void FlipperHTTP::loop()
             const char *headerValues[10];
             int headerSize = 0;
 
-            if (doc.containsKey("headers"))
+            if (doc["headers"])
             {
                 JsonObject headers = doc["headers"];
                 for (JsonPair header : headers)
@@ -958,7 +958,7 @@ void FlipperHTTP::loop()
             }
 
             // Extract values from JSON
-            if (!doc.containsKey("url") || !doc.containsKey("payload"))
+            if (!doc["url"] || !doc["payload"])
             {
                 this->uart.println(F("[ERROR] JSON does not contain url or payload."));
                 this->led.off();
@@ -972,7 +972,7 @@ void FlipperHTTP::loop()
             const char *headerValues[10];
             int headerSize = 0;
 
-            if (doc.containsKey("headers"))
+            if (doc["headers"])
             {
                 JsonObject headers = doc["headers"];
                 for (JsonPair header : headers)
@@ -1022,7 +1022,7 @@ void FlipperHTTP::loop()
             }
 
             // Extract values from JSON
-            if (!doc.containsKey("url") || !doc.containsKey("payload"))
+            if (!doc["url"] || !doc["payload"])
             {
                 this->uart.println(F("[ERROR] JSON does not contain url or payload."));
                 this->led.off();
@@ -1036,7 +1036,7 @@ void FlipperHTTP::loop()
             const char *headerValues[10];
             int headerSize = 0;
 
-            if (doc.containsKey("headers"))
+            if (doc["headers"])
             {
                 JsonObject headers = doc["headers"];
                 for (JsonPair header : headers)
@@ -1086,7 +1086,7 @@ void FlipperHTTP::loop()
             }
 
             // Extract values from JSON
-            if (!doc.containsKey("url") || !doc.containsKey("payload"))
+            if (!doc["url"] || !doc["payload"])
             {
                 this->uart.println(F("[ERROR] JSON does not contain url or payload."));
                 this->led.off();
@@ -1100,7 +1100,7 @@ void FlipperHTTP::loop()
             const char *headerValues[10];
             int headerSize = 0;
 
-            if (doc.containsKey("headers"))
+            if (doc["headers"])
             {
                 JsonObject headers = doc["headers"];
                 for (JsonPair header : headers)
@@ -1151,7 +1151,7 @@ void FlipperHTTP::loop()
             }
 
             // Extract values from JSON
-            if (!doc.containsKey("url"))
+            if (!doc["url"])
             {
                 this->uart.println(F("[ERROR] JSON does not contain url."));
                 this->led.off();
@@ -1164,7 +1164,7 @@ void FlipperHTTP::loop()
             const char *headerValues[10];
             int headerSize = 0;
 
-            if (doc.containsKey("headers"))
+            if (doc["headers"])
             {
                 JsonObject headers = doc["headers"];
                 for (JsonPair header : headers)
@@ -1206,7 +1206,7 @@ void FlipperHTTP::loop()
             }
 
             // Extract values from JSON
-            if (!doc.containsKey("url") || !doc.containsKey("payload"))
+            if (!doc["url"] || !doc["payload"])
             {
                 this->uart.println(F("[ERROR] JSON does not contain url or payload."));
                 this->led.off();
@@ -1220,7 +1220,7 @@ void FlipperHTTP::loop()
             const char *headerValues[10];
             int headerSize = 0;
 
-            if (doc.containsKey("headers"))
+            if (doc["headers"])
             {
                 JsonObject headers = doc["headers"];
                 for (JsonPair header : headers)
@@ -1255,7 +1255,7 @@ void FlipperHTTP::loop()
             }
 
             // Extract values from JSON
-            if (!doc.containsKey("key") || !doc.containsKey("json"))
+            if (!doc["key"] || !doc["json"])
             {
                 this->uart.println(F("[ERROR] JSON does not contain key or json."));
                 this->led.off();
@@ -1264,7 +1264,7 @@ void FlipperHTTP::loop()
             String key = doc["key"];
             JsonObject json = doc["json"];
 
-            if (json.containsKey(key))
+            if (json[key])
             {
                 this->uart.println(json[key].as<String>());
             }
@@ -1291,7 +1291,7 @@ void FlipperHTTP::loop()
             }
 
             // Extract values from JSON
-            if (!doc.containsKey("key") || !doc.containsKey("index") || !doc.containsKey("json"))
+            if (!doc["key"] || !doc["index"] || !doc["json"])
             {
                 this->uart.println(F("[ERROR] JSON does not contain key, index, or json."));
                 this->led.off();
@@ -1301,7 +1301,7 @@ void FlipperHTTP::loop()
             int index = doc["index"];
             JsonArray json = doc["json"];
 
-            if (json[index].containsKey(key))
+            if (json[index][key])
             {
                 this->uart.println(json[index][key].as<String>());
             }
@@ -1329,7 +1329,7 @@ void FlipperHTTP::loop()
             }
 
             // Ensure that the JSON contains a "url" and "port"
-            if (!doc.containsKey("url"))
+            if (!doc["url"])
             {
                 this->uart.println(F("[ERROR] JSON does not contain url."));
                 this->led.off();
@@ -1337,7 +1337,7 @@ void FlipperHTTP::loop()
             }
             String fullUrl = doc["url"].as<String>();
 
-            if (!doc.containsKey("port"))
+            if (!doc["port"])
             {
                 this->uart.println(F("[ERROR] JSON does not contain port."));
                 this->led.off();
@@ -1378,7 +1378,7 @@ void FlipperHTTP::loop()
             const char *headerKeys[10];
             const char *headerValues[10];
 
-            if (doc.containsKey("headers"))
+            if (doc["headers"])
             {
                 JsonObject headers = doc["headers"];
                 for (JsonPair kv : headers)
@@ -1471,7 +1471,7 @@ void FlipperHTTP::loop()
             }
 
             // Extract values from JSON
-            if (!doc.containsKey("ssid"))
+            if (!doc["ssid"])
             {
                 this->uart.println(F("[ERROR] JSON does not contain ssid."));
                 this->led.off();
