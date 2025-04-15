@@ -66,8 +66,11 @@ void WiFiAP::run()
                 this->updateHTML(uartHTML);
             }
         }
-
+#if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
+        WiFiClient client = server.accept(); // Check for incoming client
+#else
         WiFiClient client = server.available(); // Check for incoming client
+#endif
         if (client)
         {
             this->uart->println(F("[INFO] Client Connected."));
