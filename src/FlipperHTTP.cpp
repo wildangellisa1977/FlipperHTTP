@@ -207,47 +207,63 @@ String FlipperHTTP::request(
 #endif
 
 // Save WiFi settings to storage
-bool FlipperHTTP::saveWiFi(String jsonData)
+bool FlipperHTTP::saveWiFi(const String jsonData)
 {
-    JsonDocument doc;
-    DeserializationError error = deserializeJson(doc, jsonData);
-    if (error)
+    JsonDocument newEntryDoc;
+    auto err = deserializeJson(newEntryDoc, jsonData);
+    if (err)
     {
         this->uart.println(F("[ERROR] Failed to parse JSON data."));
         return false;
     }
 
-    const char *newSSID = doc["ssid"];
-    const char *newPassword = doc["password"];
-
-    bool found = false; // Check if SSID is already saved
-
-    JsonDocument existingDoc; // Load existing settings if they exist
-    if (storage.deserialize(existingDoc, settingsFilePath))
+    if (!newEntryDoc.containsKey("ssid") || !newEntryDoc.containsKey("password"))
     {
-        for (JsonObject wifi : existingDoc["wifi_list"].as<JsonArray>())
+        this->uart.println(F("[ERROR] JSON must contain 'ssid' and 'password'."));
+        return false;
+    }
+
+    const char *newSSID = newEntryDoc["ssid"];
+    const char *newPassword = newEntryDoc["password"];
+
+    JsonDocument settingsDoc;
+    bool hadSettings = storage.deserialize(settingsDoc, settingsFilePath);
+
+    JsonArray wifiList;
+    if (hadSettings && settingsDoc.containsKey("wifi_list") && settingsDoc["wifi_list"].is<JsonArray>())
+    {
+        // Use the existing array
+        wifiList = settingsDoc["wifi_list"].as<JsonArray>();
+    }
+    else
+    {
+        // No valid settings on disk yet → clear and create a new array
+        settingsDoc.clear();
+        wifiList = settingsDoc.createNestedArray("wifi_list");
+    }
+
+    // check for duplicates
+    for (JsonObject net : wifiList)
+    {
+        if (net["ssid"] == newSSID)
         {
-            if (wifi["ssid"] == newSSID)
-            {
-                found = true;
-                break;
-            }
+            return true;
         }
     }
 
-    // Add new SSID and password if not found
-    if (!found)
-    {
-        JsonArray wifiList = existingDoc["wifi_list"].to<JsonArray>();
-        JsonObject newWifi = wifiList.add<JsonObject>();
-        newWifi["ssid"] = newSSID;
-        newWifi["password"] = newPassword;
+    // append the new network
+    JsonObject added = wifiList.createNestedObject();
+    added["ssid"] = newSSID;
+    added["password"] = newPassword;
 
-        // Save updated list to file
-        storage.serialize(existingDoc, settingsFilePath);
+    // persist back to flash
+    if (!storage.serialize(settingsDoc, settingsFilePath))
+    {
+        this->uart.println(F("[ERROR] Failed to write settings to storage."));
+        return false;
     }
 
-    this->uart.print(F("[SUCCESS] Settings saved."));
+    this->uart.println(F("[SUCCESS] Settings saved."));
     return true;
 }
 
