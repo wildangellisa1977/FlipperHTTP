@@ -58,10 +58,8 @@ void WiFiAP::run()
             // if starts with [WIFI/AP/UPDATE] then update the HTML
             else if (uartCmd.startsWith("[WIFI/AP/UPDATE]"))
             {
-                this->uart->println("DEBUG: Update command");
                 String uartHTML = this->uart->readStringUntilString("[WIFI/AP/UPDATE/END]");
                 uartHTML.trim();
-                this->uart->println("DEBUG: Received HTML update:");
                 this->uart->println(uartHTML);
                 this->updateHTML(uartHTML);
             }
