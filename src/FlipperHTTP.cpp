@@ -9,30 +9,38 @@ Updated: 2025-04-12
 #include "FlipperHTTP.h"
 #include "wifi_ap.h"
 
-// Load WiFi settings from SPIFFS and attempt to connect
+// Load WiFi settings
 bool FlipperHTTP::loadWiFi()
 {
     JsonDocument doc;
     if (!storage.deserialize(doc, settingsFilePath))
     {
+        this->uart.println(F("[ERROR] Failed to deserialize JSON from settings file."));
+        return false;
+    }
+
+    if (!doc.containsKey("wifi_list") || !doc["wifi_list"].is<JsonArray>())
+    {
+        this->uart.println(F("[ERROR] JSON missing 'wifi_list' or it's not an array."));
         return false;
     }
 
     JsonArray wifiList = doc["wifi_list"].as<JsonArray>();
+
     for (JsonObject wifi : wifiList)
     {
-        const char *ssid = wifi["ssid"];
-        const char *password = wifi["password"];
+        const char *ssid = wifi["ssid"] | "";
+        const char *password = wifi["password"] | "";
 
         strncpy(loaded_ssid, ssid, sizeof(loaded_ssid));
         strncpy(loaded_pass, password, sizeof(loaded_pass));
 
-        // if WiFi connects return true otherwise continue
         if (this->wifi.connect(loaded_ssid, loaded_pass))
         {
             return true;
         }
     }
+    this->uart.println(F("[ERROR] No networks connected."));
     return false;
 }
 
