@@ -89,16 +89,9 @@ String FlipperHTTP::request(
             this->client.println(payload);
         }
 
-        // Wait for response
-        while (this->client.connected() || this->client.available())
-        {
-            if (this->client.available())
-            {
-                String line = this->client.readStringUntil('\n');
-                response += line + "\n";
-            }
-        }
-
+        // read everything that’s in the buffer, then stop
+        while (this->client.available())
+            response += this->client.readStringUntil('\n') + "\n";
         this->client.stop();
     }
     else
