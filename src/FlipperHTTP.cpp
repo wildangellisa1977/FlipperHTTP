@@ -29,17 +29,23 @@ bool FlipperHTTP::loadWiFi()
 
     for (JsonObject wifi : wifiList)
     {
-        const char *ssid = wifi["ssid"] | "";
-        const char *password = wifi["password"] | "";
+        // Skip if no SSID or password
+        if (!wifi.containsKey("ssid") || !wifi.containsKey("password"))
+            continue;
+
+        const char *ssid = wifi["ssid"];
+        const char *password = wifi["password"];
 
         strncpy(loaded_ssid, ssid, sizeof(loaded_ssid));
         strncpy(loaded_pass, password, sizeof(loaded_pass));
 
+        // Try to connect
         if (this->wifi.connect(loaded_ssid, loaded_pass))
         {
             return true;
         }
     }
+
     this->uart.println(F("[ERROR] No networks connected."));
     return false;
 }
