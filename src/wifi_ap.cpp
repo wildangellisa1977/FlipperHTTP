@@ -58,16 +58,17 @@ void WiFiAP::run()
             // if starts with [WIFI/AP/UPDATE] then update the HTML
             else if (uartCmd.startsWith("[WIFI/AP/UPDATE]"))
             {
-                this->uart->println("DEBUG: Update command");
                 String uartHTML = this->uart->readStringUntilString("[WIFI/AP/UPDATE/END]");
                 uartHTML.trim();
-                this->uart->println("DEBUG: Received HTML update:");
                 this->uart->println(uartHTML);
                 this->updateHTML(uartHTML);
             }
         }
-
+#if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
+        WiFiClient client = server.accept(); // Check for incoming client
+#else
         WiFiClient client = server.available(); // Check for incoming client
+#endif
         if (client)
         {
             this->uart->println(F("[INFO] Client Connected."));

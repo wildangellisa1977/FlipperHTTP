@@ -5,10 +5,13 @@
 class UART
 {
 public:
+    UART()
+    {
+    }
     size_t available();
     void begin(uint32_t baudrate);
     void flush();
-    void clear_buffer();
+    void clearBuffer();
     void print(String str);
     void printf(const char *format, ...);
     void println(String str = "");
@@ -16,7 +19,7 @@ public:
     uint8_t readBytes(uint8_t *buffer, size_t size);
     String readSerialLine();
     String readStringUntilString(String terminator);
-    void set_timeout(uint32_t timeout);
+    void setTimeout(uint32_t timeout);
     void write(const uint8_t *buffer, size_t size);
 #ifdef BOARD_VGM
     void set_pins(uint8_t tx_pin, uint8_t rx_pin);

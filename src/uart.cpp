@@ -26,7 +26,7 @@ void UART::begin(uint32_t baudrate)
 #endif
 }
 
-void UART::clear_buffer()
+void UART::clearBuffer()
 {
     while (this->available() > 0)
     {
@@ -180,7 +180,7 @@ void UART::set_pins(uint8_t tx_pin, uint8_t rx_pin)
 }
 #endif
 
-void UART::set_timeout(uint32_t timeout)
+void UART::setTimeout(uint32_t timeout)
 {
 #if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
     this->serial->setTimeout(timeout);

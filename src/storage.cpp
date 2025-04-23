@@ -1,5 +1,11 @@
 #include "storage.h"
 
+#define UNUSED(expr)  \
+    do                \
+    {                 \
+        (void)(expr); \
+    } while (0)
+
 bool StorageManager::begin()
 {
 #if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
@@ -36,6 +42,7 @@ bool StorageManager::deserialize(JsonDocument &doc, const char *filename)
     return !error; // return no error
 #else
     /*We will keep all data at the same address and overwrite for now*/
+    UNUSED(filename);
     char buffer[512];
     FlashStorage.get(0, buffer);
     buffer[sizeof(buffer) - 1] = '\0'; // Null-terminate the string
@@ -73,6 +80,7 @@ String StorageManager::read(const char *filename)
 #else
     /*We will keep all data at the same address and overwrite for now*/
     // we wrote in char so we need to read in char, then convert to string
+    UNUSED(filename);
     char buffer[512];
     FlashStorage.get(0, buffer);
     buffer[sizeof(buffer) - 1] = '\0'; // Null-terminate the string
@@ -98,6 +106,7 @@ bool StorageManager::serialize(JsonDocument &doc, const char *filename)
     return false;
 #else
     /*We will keep all data at the same address and overwrite for now*/
+    UNUSED(filename);
     char buffer[512];
     size_t len = serializeJson(doc, buffer, sizeof(buffer));
     buffer[len] = '\0'; // Null-terminate the string
@@ -124,6 +133,7 @@ bool StorageManager::write(const char *filename, const char *data)
     return false;
 #else
     /*We will keep all data at the same address and overwrite for now*/
+    UNUSED(filename);
     FlashStorage.put(0, data);
     return true;
 #endif
