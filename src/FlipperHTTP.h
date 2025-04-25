@@ -39,6 +39,7 @@ Change Log:
 - 2025-04-25:
     - Removed the uploadBytes method
     - Added [VERSION] command to get the version of the library
+    - Handled ArduinoJson deprecation warnings
 */
 #pragma once
 #include "certs.h"

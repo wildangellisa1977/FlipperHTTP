@@ -19,7 +19,7 @@ bool FlipperHTTP::loadWiFi()
         return false;
     }
 
-    if (!doc.containsKey("wifi_list") || !doc["wifi_list"].is<JsonArray>())
+    if (!doc["wifi_list"] || !doc["wifi_list"].is<JsonArray>())
     {
         this->uart.println(F("[ERROR] JSON missing 'wifi_list' or it's not an array."));
         return false;
@@ -30,7 +30,7 @@ bool FlipperHTTP::loadWiFi()
     for (JsonObject wifi : wifiList)
     {
         // Skip if no SSID or password
-        if (!wifi.containsKey("ssid") || !wifi.containsKey("password"))
+        if (!wifi["ssid"] || !wifi["password"])
             continue;
 
         const char *ssid = wifi["ssid"];
@@ -217,7 +217,7 @@ bool FlipperHTTP::saveWiFi(const String jsonData)
         return false;
     }
 
-    if (!newEntryDoc.containsKey("ssid") || !newEntryDoc.containsKey("password"))
+    if (!newEntryDoc["ssid"] || !newEntryDoc["password"])
     {
         this->uart.println(F("[ERROR] JSON must contain 'ssid' and 'password'."));
         return false;
@@ -230,7 +230,7 @@ bool FlipperHTTP::saveWiFi(const String jsonData)
     bool hadSettings = storage.deserialize(settingsDoc, settingsFilePath);
 
     JsonArray wifiList;
-    if (hadSettings && settingsDoc.containsKey("wifi_list") && settingsDoc["wifi_list"].is<JsonArray>())
+    if (hadSettings && settingsDoc["wifi_list"] && settingsDoc["wifi_list"].is<JsonArray>())
     {
         // Use the existing array
         wifiList = settingsDoc["wifi_list"].as<JsonArray>();
@@ -239,7 +239,7 @@ bool FlipperHTTP::saveWiFi(const String jsonData)
     {
         // No valid settings on disk yet → clear and create a new array
         settingsDoc.clear();
-        wifiList = settingsDoc.createNestedArray("wifi_list");
+        wifiList = settingsDoc["wifi_list"].to<JsonArray>();
     }
 
     // check for duplicates
@@ -252,7 +252,7 @@ bool FlipperHTTP::saveWiFi(const String jsonData)
     }
 
     // append the new network
-    JsonObject added = wifiList.createNestedObject();
+    JsonObject added = wifiList.add<JsonObject>();
     added["ssid"] = newSSID;
     added["password"] = newPassword;
 
