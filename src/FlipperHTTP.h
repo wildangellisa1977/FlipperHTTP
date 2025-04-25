@@ -53,7 +53,7 @@ Change Log:
 #include "storage.h"
 
 #define BAUD_RATE 115200
-#define FLIPPER_HTTP_VERSION "1.8.3"
+#define FLIPPER_HTTP_VERSION "1.8.5"
 
 class FlipperHTTP
 {
