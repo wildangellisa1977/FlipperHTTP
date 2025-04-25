@@ -4,9 +4,8 @@ static const PROGMEM String wifiAPHeader = "HTTP/1.1 200 OK\r\n"
                                            "Content-type:text/html\r\n"
                                            "\r\n";
 
-WiFiAP::WiFiAP(UART *uartClass, WiFiUtils *wifiUtils) : ip(""),
-                                                        uart(uartClass), wifi(wifiUtils),
-                                                        isRunning(false)
+WiFiAP::WiFiAP(UART *uartClass, WiFiUtils *wifiUtils) : uart(uartClass), wifi(wifiUtils),
+                                                        isRunning(false), ip("")
 {
     // default html
     this->html = wifiAPHeader;
