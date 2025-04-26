@@ -3,7 +3,7 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over serial.
 Created: 2024-09-30
-Updated: 2025-04-25
+Updated: 2025-04-26
 
 Change Log:
 - 2024-09-30: Initial commit
@@ -40,6 +40,7 @@ Change Log:
     - Removed the uploadBytes method
     - Added [VERSION] command to get the version of the library
     - Handled ArduinoJson deprecation warnings
+- 2025-04-26: Updated AP mode to redirect clients to the captive portal
 */
 #pragma once
 #include "certs.h"
