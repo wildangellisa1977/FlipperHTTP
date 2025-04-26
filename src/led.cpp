@@ -1,5 +1,25 @@
 #include "led.h"
 
+#if defined(BOARD_ESP32_C6) || defined(BOARD_ESP32_C3)
+#include <Adafruit_NeoPixel.h>
+#if defined(BOARD_ESP32_C6)
+constexpr uint8_t LED_PIN = 10;
+#elif defined(BOARD_ESP32_C3)
+constexpr uint8_t LED_PIN = 8;
+#endif
+constexpr uint8_t NUM_LEDS = 1;
+
+extern Adafruit_NeoPixel rgbLed;
+
+struct RGB
+{
+    uint8_t r, g, b;
+};
+
+constexpr RGB COLOR_OFF = {0, 0, 0};
+constexpr RGB COLOR_GREEN = {0, 255, 0};
+#endif
+
 #if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM) || defined(BOARD_BW16)
 #define LED_ON HIGH
 #define LED_OFF LOW
@@ -10,10 +30,6 @@
 
 #ifdef BOARD_ESP32_C6
 Adafruit_NeoPixel rgbLed(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
-#elif defined(BOARD_ESP32_S3)
-#ifndef RGB_BUILTIN
-Adafruit_NeoPixel rgbLed(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
-#endif
 #endif
 
 void LED::blink(int timeout)
@@ -108,10 +124,8 @@ void LED::start()
     pinMode(4, OUTPUT); // Set Green Pin mode as output
 #elif defined(BOARD_ESP32_S3)
 #ifdef RGB_BUILTIN
-    // No need to initialize the RGB LED
-#else
-    rgbLed.begin();
-    rgbLed.show();
+    digitalWrite(RGB_BUILTIN, LOW);      // Turn the RGB LED off
+    neopixelWrite(RGB_BUILTIN, 0, 0, 0); // Off / black
 #endif
 #elif defined(BOARD_ESP32_WROOM)
     pinMode(2, OUTPUT); // Set Green Pin mode as output
@@ -149,9 +163,6 @@ void LED::on()
 #elif defined(BOARD_ESP32_S3)
 #ifdef RGB_BUILTIN
     neopixelWrite(RGB_BUILTIN, 0, RGB_BRIGHTNESS, 0); // Green
-#else
-    rgbLed.setPixelColor(0, rgbLed.Color(COLOR_GREEN.r, COLOR_GREEN.g, COLOR_GREEN.b));
-    rgbLed.show();
 #endif
 #elif defined(BOARD_ESP32_WROOM)
     digitalWrite(2, LED_ON); // GREEN
@@ -182,9 +193,6 @@ void LED::off()
 #elif defined(BOARD_ESP32_S3)
 #ifdef RGB_BUILTIN
     neopixelWrite(RGB_BUILTIN, 0, 0, 0); // Off / black
-#else
-    rgbLed.setPixelColor(0, rgbLed.Color(COLOR_OFF.r, COLOR_OFF.g, COLOR_OFF.b));
-    rgbLed.show();
 #endif
 #elif defined(BOARD_ESP32_WROOM)
     digitalWrite(2, LED_OFF); // GREEN
