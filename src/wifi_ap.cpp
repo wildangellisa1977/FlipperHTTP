@@ -24,6 +24,32 @@ WiFiAP::WiFiAP(UART *uartClass, WiFiUtils *wifiUtils)
     html += "</html>";
 }
 
+void WiFiAP::printInputs(const String &request)
+{
+    auto getIdx = request.indexOf("get?");
+    if (getIdx != -1 && request.startsWith("GET"))
+    {
+        int startPos = getIdx;
+        int endPos = request.indexOf("HTTP/1.1", startPos);
+
+        if (startPos > 0 && endPos > startPos)
+        {
+            String path = request.substring(startPos, endPos);
+            int start = getIdx - 1;
+            int end = path.indexOf('&', start);
+            while (end != -1)
+            {
+                String part = path.substring(start, end);
+                uart->println(part);
+                start = end + 1;
+                end = path.indexOf('&', start);
+            }
+            String part = path.substring(start, end);
+            uart->println(part);
+        }
+    }
+}
+
 bool WiFiAP::start(const char *ssid)
 {
     String ipStr = wifi->connectAP(ssid);
@@ -93,23 +119,29 @@ void WiFiAP::run()
         if (client)
         {
             uart->println(F("[INFO] Client Connected."));
-            bool sent = false;
-            while (client.connected() && !sent)
+            String request = "";
+            unsigned long timeout = millis() + 5000;
+            while (client.connected() && millis() < timeout)
             {
-                if (client.available())
+                if (request.indexOf("\r\n\r\n") > 0)
                 {
-                    String line = client.readStringUntil('\n');
-                    if (line == "\r")
-                    {
-                        client.println(html);
-                        sent = true;
-                        break;
-                    }
+                    break;
                 }
+
+                // Read available data
+                while (client.available() && millis() < timeout)
+                {
+                    char c = client.read();
+                    request += c;
+                    timeout = millis() + 1000; // Reset timeout on data received
+                }
+                delay(1);
             }
+            printInputs(request);
+            client.println(html);
+            delay(10);
             client.stop();
         }
-
         delay(10);
     }
 
