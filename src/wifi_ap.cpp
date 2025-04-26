@@ -1,100 +1,160 @@
 #include "wifi_ap.h"
 
-static const PROGMEM String wifiAPHeader = "HTTP/1.1 200 OK\r\n"
-                                           "Content-type:text/html\r\n"
-                                           "\r\n";
+#ifndef BOARD_BW16
+static const char *DNS_HOST = "*";
+static const byte DNS_PORT = 53;
+#endif
 
-WiFiAP::WiFiAP(UART *uartClass, WiFiUtils *wifiUtils) : ip(""),
-                                                        uart(uartClass), wifi(wifiUtils),
-                                                        isRunning(false)
+static const PROGMEM String wifiAPHeader =
+    "HTTP/1.1 200 OK\r\n"
+    "Content-type:text/html\r\n"
+    "\r\n";
+
+WiFiAP::WiFiAP(UART *uartClass, WiFiUtils *wifiUtils)
+#ifndef BOARD_BW16
+    : uart(uartClass), wifi(wifiUtils), dnsServer(), isRunning(false)
+#else
+    : uart(uartClass), wifi(wifiUtils), isRunning(false)
+#endif
 {
-    // default html
-    this->html = wifiAPHeader;
-    this->html += "<!DOCTYPE html><html>\r\n";
-    this->html += "<head><title>FlipperHTTP</title></head>\r\n";
-    this->html += "<body><h1>Welcome to FlipperHTTP AP Mode</h1></body>\r\n";
-    this->html += "</html>";
+    html = wifiAPHeader;
+    html += "<!DOCTYPE html><html>\r\n";
+    html += "<head><title>FlipperHTTP</title></head>\r\n";
+    html += "<body><h1>Welcome to FlipperHTTP AP Mode</h1></body>\r\n";
+    html += "</html>";
 }
+
+void WiFiAP::printInputs(const String &request)
+{
+    auto getIdx = request.indexOf("get?");
+    if (getIdx != -1 && request.startsWith("GET"))
+    {
+        int startPos = getIdx;
+        int endPos = request.indexOf("HTTP/1.1", startPos);
+
+        if (startPos > 0 && endPos > startPos)
+        {
+            String path = request.substring(startPos, endPos);
+            int start = getIdx - 1;
+            int end = path.indexOf('&', start);
+            while (end != -1)
+            {
+                String part = path.substring(start, end);
+                uart->println(part);
+                start = end + 1;
+                end = path.indexOf('&', start);
+            }
+            String part = path.substring(start, end);
+            uart->println(part);
+        }
+    }
+}
+
 bool WiFiAP::start(const char *ssid)
 {
-    this->ip = this->wifi->connectAP(ssid); // Connect to WiFi in AP mode
-    if (this->ip != "")
+    String ipStr = wifi->connectAP(ssid);
+    if (ipStr.length() == 0)
     {
-        char buffer[64];
-        snprintf(buffer, sizeof(buffer), "[SUCCESS]{\"IP\":\"%s\"}", this->ip.c_str());
-        this->uart->println(buffer);
-        this->uart->flush();
-        this->isRunning = true; // Set running flag to true
-        return true;            // Return true if connected successfully
+        uart->println(F("[ERROR] Failed to start AP mode."));
+        return false;
     }
-    else
-    {
-        this->uart->println(F("[ERROR] Failed to start AP mode."));
-        return false; // Return false if failed to connect
-    }
+
+#ifndef BOARD_BW16
+    apIP = IPAddress();
+    apIP.fromString(ipStr);
+#endif
+
+#ifndef BOARD_BW16
+    dnsServer.start(DNS_PORT, DNS_HOST, apIP);
+#endif
+
+    char buffer[64];
+    snprintf(buffer, sizeof(buffer), "[SUCCESS]{\"IP\":\"%s\"}", ipStr.c_str());
+    uart->println(buffer);
+    uart->flush();
+
+    isRunning = true;
+    return true;
 }
+
 void WiFiAP::run()
 {
-    if (!this->isRunning)
+    if (!isRunning)
     {
-        this->uart->println(F("[ERROR] AP mode is not running."));
-        return; // Exit if AP mode is not running
+        uart->println(F("[ERROR] AP mode not running."));
+        return;
     }
+
     WiFiServer server(80);
     server.begin();
+
     while (true)
     {
-        // Check for UART command to stop AP mode.
-        if (this->uart->available())
+#ifndef BOARD_BW16
+        dnsServer.processNextRequest();
+#endif
+        if (uart->available())
         {
-            String uartCmd = this->uart->readSerialLine();
-            // if starts with [WIFI/AP/STOP] then stop AP mode
-            if (uartCmd.startsWith("[WIFI/AP/STOP]"))
+            String cmd = uart->readSerialLine();
+            if (cmd.startsWith("[WIFI/AP/STOP]"))
             {
-                this->uart->println(F("[INFO] Stopping AP mode."));
-                this->uart->flush();
+                uart->println(F("[INFO] Stopping AP mode."));
+                uart->flush();
                 break;
             }
-            // if starts with [WIFI/AP/UPDATE] then update the HTML
-            else if (uartCmd.startsWith("[WIFI/AP/UPDATE]"))
+            else if (cmd.startsWith("[WIFI/AP/UPDATE]"))
             {
-                String uartHTML = this->uart->readStringUntilString("[WIFI/AP/UPDATE/END]");
-                uartHTML.trim();
-                this->uart->println(uartHTML);
-                this->updateHTML(uartHTML);
+                String newHtml = uart->readStringUntilString("[WIFI/AP/UPDATE/END]");
+                newHtml.trim();
+                updateHTML(newHtml);
+                uart->println(F("[INFO] HTML updated."));
             }
         }
+
 #if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
-        WiFiClient client = server.accept(); // Check for incoming client
+        WiFiClient client = server.accept();
 #else
-        WiFiClient client = server.available(); // Check for incoming client
+        WiFiClient client = server.available();
 #endif
         if (client)
         {
-            this->uart->println(F("[INFO] Client Connected."));
-            while (client.connected())
+            uart->println(F("[INFO] Client Connected."));
+            String request = "";
+            unsigned long timeout = millis() + 5000;
+            while (client.connected() && millis() < timeout)
             {
-                if (client.available())
+                if (request.indexOf("\r\n\r\n") > 0)
                 {
-                    String line = client.readStringUntil('\n');
-                    if (line == "\r")
-                    {
-                        // End of HTTP headers; now send the response
-                        client.println(this->html);
-                        break;
-                    }
+                    break;
                 }
+
+                // Read available data
+                while (client.available() && millis() < timeout)
+                {
+                    char c = client.read();
+                    request += c;
+                    timeout = millis() + 1000; // Reset timeout on data received
+                }
+                delay(1);
             }
-            this->uart->flush(); // Flush the UART buffer
-            client.stop();       // Stop the client connection
+            printInputs(request);
+            client.println(html);
+            delay(10);
+            client.stop();
         }
         delay(10);
     }
-    server.end();             // End the server
-    this->wifi->disconnect(); // Disconnect from WiFi
+
+    server.end();
+    wifi->disconnect();
+#ifndef BOARD_BW16
+    dnsServer.stop();
+#endif
+    isRunning = false;
 }
-void WiFiAP::updateHTML(String html)
+
+void WiFiAP::updateHTML(const String &htmlContent)
 {
-    this->html = wifiAPHeader; // Reset the HTML header
-    this->html += html;        // Update the HTML content
+    html = wifiAPHeader;
+    html += htmlContent;
 }
