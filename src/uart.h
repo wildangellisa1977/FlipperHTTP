@@ -18,7 +18,7 @@ public:
     uint8_t read();
     uint8_t readBytes(uint8_t *buffer, size_t size);
     String readSerialLine();
-    String readStringUntilString(String terminator);
+    String readStringUntilString(const String &terminator, uint32_t timeout = 5000);
     void setTimeout(uint32_t timeout);
     void write(const uint8_t *buffer, size_t size);
 #ifdef BOARD_VGM
