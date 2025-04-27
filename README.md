@@ -1,13 +1,17 @@
 # FlipperHTTP
 An HTTP library for the Flipper Zero, compatible with the WiFi Developer Board, Raspberry Pi, and other ESP32 devices.
 
-
 Star the repository and [follow me](https://www.github.com/jblanked) to stay updated on new releases and upcoming Flipper apps.
+
+## Connect Online
+- Discord: https://discord.gg/5aN9qwkEc6
+- YouTube: https://www.youtube.com/@jblanked
+- Instagram: https://www.instagram.com/jblanked
+- Other: https://www.jblanked.com/social/
 
 Check out this video tutorial showcasing the functionality of all seven applications: https://www.youtube.com/watch?v=xR1ZbpOVTwE
 
 Special thank you to Talking Sasquatch for his support: https://www.youtube.com/watch?v=jYZkdz664Tg
-
 
 ## Apps That Utilize FlipperHTTP
 The following apps integrate FlipperHTTP to enhance their functionality:
