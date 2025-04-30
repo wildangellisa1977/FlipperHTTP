@@ -41,7 +41,7 @@ Change Log:
     - Added [VERSION] command to get the version of the library
     - Handled ArduinoJson deprecation warnings
 - 2025-04-26: Updated AP mode to redirect clients to the captive portal
-- 2025-04-30: Start support for the ESP32-C5 board
+- 2025-04-30: Add support for the ESP32-C5 board
 */
 #pragma once
 #include "certs.h"
