@@ -21,6 +21,11 @@ bool WiFiUtils::connectHelper(const char *ssid, const char *password, bool isAP)
 #else
     WiFi.disconnect();
 #endif
+
+#ifdef BOARD_ESP32_C5
+    WiFi.setBandMode(WIFI_BAND_MODE_AUTO);
+#endif
+
     if (isAP)
     {
 #ifndef BOARD_BW16
