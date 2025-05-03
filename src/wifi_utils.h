@@ -4,9 +4,42 @@
 #ifndef BOARD_BW16
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
+typedef struct
+{
+    String ssid;
+    short rssi;
+    uint8_t channel;
+} WiFiScanResult;
+
+// Maximum number of APs to record in a single scan
+#define WIFI_MAX_SCAN 64
+
+// Global scan results array and count
+extern WiFiScanResult wifiScanResults[WIFI_MAX_SCAN];
+extern int wifiScanCount;
 #else
 #include "WiFiClient.h"
 #include "WiFiServer.h"
+#include <wifi_conf.h>
+#define WIFI_STA RTW_MODE_STA
+#define WIFI_AP RTW_MODE_AP
+
+typedef struct
+{
+    String ssid;
+    String bssid_str;
+    uint8_t bssid[6];
+    short rssi;
+    uint8_t channel;
+    rtw_security_t security;
+} WiFiScanResult;
+
+// Maximum number of APs to record in a single scan
+#define BW16_MAX_SCAN 64
+
+// Global scan results array and count
+extern WiFiScanResult bw16ScanResults[BW16_MAX_SCAN];
+extern int bw16ScanCount;
 #endif
 #include "WiFi.h"
 
