@@ -3,7 +3,7 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over serial.
 Created: 2024-09-30
-Updated: 2025-04-30
+Updated: 2025-05-03
 
 Change Log:
 - 2024-09-30: Initial commit
@@ -41,7 +41,8 @@ Change Log:
     - Added [VERSION] command to get the version of the library
     - Handled ArduinoJson deprecation warnings
 - 2025-04-26: Updated AP mode to redirect clients to the captive portal
-- 2025-04-30: Add support for the ESP32-C5 board
+- 2025-04-30: Added support for the ESP32-C5 board
+- 2025-05-03: Added deauth support for ESP32 and BW16 boards
 */
 #pragma once
 #include "certs.h"
@@ -56,7 +57,7 @@ Change Log:
 #include "storage.h"
 
 #define BAUD_RATE 115200
-#define FLIPPER_HTTP_VERSION "1.8.6"
+#define FLIPPER_HTTP_VERSION "2.0"
 
 class FlipperHTTP
 {

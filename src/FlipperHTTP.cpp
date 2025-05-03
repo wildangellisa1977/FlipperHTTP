@@ -3,11 +3,12 @@ Author: JBlanked
 Github: https://github.com/jblanked/FlipperHTTP
 Info: This library is a wrapper around the HTTPClient library and is used to communicate with the FlipperZero over tthis->uart.
 Created: 2024-09-30
-Updated: 2025-04-30
+Updated: 2025-05-03
 */
 
 #include "FlipperHTTP.h"
 #include "wifi_ap.h"
+#include "wifi_deauth.h"
 
 // Load WiFi settings
 bool FlipperHTTP::loadWiFi()
@@ -612,7 +613,7 @@ void FlipperHTTP::loop()
         // print the available commands
         if (_data.startsWith("[LIST]"))
         {
-            this->uart.println(F("[LIST], [PING], [REBOOT], [WIFI/IP], [WIFI/SCAN], [WIFI/SAVE], [WIFI/CONNECT], [WIFI/DISCONNECT], [WIFI/LIST], [GET], [GET/HTTP], [POST/HTTP], [PUT/HTTP], [DELETE/HTTP], [GET/BYTES], [POST/BYTES], [PARSE], [PARSE/ARRAY], [LED/ON], [LED/OFF], [IP/ADDRESS], [WIFI/AP], [VERSION]"));
+            this->uart.println(F("[LIST], [PING], [REBOOT], [WIFI/IP], [WIFI/SCAN], [WIFI/SAVE], [WIFI/CONNECT], [WIFI/DISCONNECT], [WIFI/LIST], [GET], [GET/HTTP], [POST/HTTP], [PUT/HTTP], [DELETE/HTTP], [GET/BYTES], [POST/BYTES], [PARSE], [PARSE/ARRAY], [LED/ON], [LED/OFF], [IP/ADDRESS], [WIFI/AP], [VERSION], [DEAUTH]"));
         }
         // handle [LED/ON] command
         else if (_data.startsWith("[LED/ON]"))
@@ -681,7 +682,7 @@ void FlipperHTTP::loop()
 #if defined(BOARD_PICO_W) || defined(BOARD_PICO_2W) || defined(BOARD_VGM)
             rp2040.reboot();
 #elif defined(BOARD_BW16)
-            // not supported yet
+            ota_platform_reset();
 #else
             ESP.restart();
 #endif
@@ -1395,6 +1396,58 @@ void FlipperHTTP::loop()
             this->uart.println(F("[AP/CONNECTED]"));
             ap.run();
             this->uart.println(F("[AP/DISCONNECTED]"));
+        }
+        // [DEAUTH] Deauth command
+        else if (_data.startsWith("[DEAUTH]"))
+        {
+            // Extract the JSON by removing the command part
+            String jsonData = _data.substring(strlen("[DEAUTH]"));
+            jsonData.trim();
+
+            JsonDocument doc;
+            DeserializationError error = deserializeJson(doc, jsonData);
+
+            if (error)
+            {
+                this->uart.print(F("[ERROR] Failed to parse JSON."));
+                this->led.off();
+                return;
+            }
+
+            // Extract values from JSON
+            if (!doc["ssid"])
+            {
+                this->uart.println(F("[ERROR] JSON does not contain ssid"));
+                this->led.off();
+                return;
+            }
+
+            String ssid = doc["ssid"];
+
+            WiFiDeauth deauther;
+            this->uart.println(F("[DEAUTH/STARTING]"));
+
+            if (!deauther.start(ssid.c_str()))
+            {
+                this->led.off();
+                return; // error is handled by class
+            }
+
+            this->uart.println(F("[DEAUTH/STARTED]"));
+
+            String uartMessage = "";
+            while (uartMessage != "[DEAUTH/STOP]")
+            {
+                // Check if there's incoming serial data
+                if (this->uart.available() > 0)
+                {
+                    // Read the incoming serial data until newline
+                    uartMessage = this->uart.readSerialLine();
+                }
+                deauther.update();
+            }
+            deauther.stop();
+            this->uart.println(F("[DEAUTH/STOPPED]"));
         }
 
         this->led.off();

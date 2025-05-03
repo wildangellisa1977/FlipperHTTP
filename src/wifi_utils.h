@@ -4,6 +4,19 @@
 #ifndef BOARD_BW16
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
+typedef struct
+{
+    String ssid;
+    short rssi;
+    uint8_t channel;
+} WiFiScanResult;
+
+// Maximum number of APs to record in a single scan
+#define WIFI_MAX_SCAN 64
+
+// Global scan results array and count
+extern WiFiScanResult wifiScanResults[WIFI_MAX_SCAN];
+extern int wifiScanCount;
 #else
 #include "WiFiClient.h"
 #include "WiFiServer.h"
@@ -22,11 +35,11 @@ typedef struct
 } WiFiScanResult;
 
 // Maximum number of APs to record in a single scan
-#define BW16_MAX_SCAN 32
+#define BW16_MAX_SCAN 64
 
 // Global scan results array and count
 extern WiFiScanResult bw16ScanResults[BW16_MAX_SCAN];
-extern int bw16_scan_count;
+extern int bw16ScanCount;
 #endif
 #include "WiFi.h"
 

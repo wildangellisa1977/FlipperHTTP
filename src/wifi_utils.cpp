@@ -1,12 +1,15 @@
 #include "wifi_utils.h"
 
-#ifdef BOARD_BW16
+#ifndef BOARD_BW16
+WiFiScanResult wifiScanResults[WIFI_MAX_SCAN];
+int wifiScanCount = 0;
+#else
 WiFiScanResult bw16ScanResults[BW16_MAX_SCAN];
-int bw16_scan_count = 0;
+int bw16ScanCount = 0;
 // scan callback
 static rtw_result_t scanResultHandler(rtw_scan_handler_result_t *scan_result)
 {
-    if (scan_result->scan_complete == 0 && bw16_scan_count < BW16_MAX_SCAN)
+    if (scan_result->scan_complete == 0 && bw16ScanCount < BW16_MAX_SCAN)
     {
         auto *rec = &scan_result->ap_details;
 
@@ -14,7 +17,7 @@ static rtw_result_t scanResultHandler(rtw_scan_handler_result_t *scan_result)
         rec->SSID.val[rec->SSID.len] = '\0';
 
         // Populate our slot
-        auto &slot = bw16ScanResults[bw16_scan_count++];
+        auto &slot = bw16ScanResults[bw16ScanCount++];
         slot.ssid = String((char *)rec->SSID.val);
         slot.channel = rec->channel;
         slot.rssi = rec->signal_strength;
@@ -38,7 +41,7 @@ static rtw_result_t scanResultHandler(rtw_scan_handler_result_t *scan_result)
 // Kick off a full scan, filling bw16ScanResults[]
 static bool bw16Scan(int timeout = 10)
 {
-    bw16_scan_count = 0;
+    bw16ScanCount = 0;
     if (wifi_scan_networks(scanResultHandler, NULL) == RTW_SUCCESS)
     {
         delay(timeout * 1000);
@@ -155,7 +158,7 @@ String WiFiUtils::scan()
 {
 #ifdef BOARD_BW16
     // reset the results and count
-    bw16_scan_count = 0;
+    bw16ScanCount = 0;
     for (int i = 0; i < BW16_MAX_SCAN; i++)
     {
         bw16ScanResults[i].ssid = "";
@@ -165,9 +168,11 @@ String WiFiUtils::scan()
     }
     if (!bw16Scan())
     {
+        Serial1.println(F("[ERROR] Failed to scan for networks."));
         return "";
     }
 #else
+    WiFi.scanDelete();
     int n = WiFi.scanNetworks();
 #endif
     String json = "{\"networks\":[";
@@ -176,6 +181,9 @@ String WiFiUtils::scan()
     {
         json += "\"";
         json += WiFi.SSID(i);
+        wifiScanResults[i].ssid = WiFi.SSID(i);
+        wifiScanResults[i].rssi = WiFi.RSSI(i);
+        wifiScanResults[i].channel = WiFi.channel(i);
         json += "\"";
         if (i < n - 1)
         {
@@ -183,12 +191,12 @@ String WiFiUtils::scan()
         }
     }
 #else
-    for (int i = 0; i < bw16_scan_count; ++i)
+    for (int i = 0; i < bw16ScanCount; ++i)
     {
         json += "\"";
         json += bw16ScanResults[i].ssid;
         json += "\"";
-        if (i < bw16_scan_count - 1)
+        if (i < bw16ScanCount - 1)
         {
             json += ",";
         }
