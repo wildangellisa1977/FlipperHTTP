@@ -33,6 +33,9 @@ FlipperHTTP can be utilized by developers in Flipper Zero apps and scripts writt
 ## Issues
 For common bugs and their solutions, see: [https://github.com/jblanked/FlipperHTTP/blob/main/HELP.md](https://github.com/jblanked/FlipperHTTP/blob/main/HELP.md)
 
+## Disclaimer
+Please use this firmware responsibly. JBlanked and JBlanked, LLC disclaim all liability for any misuse of this firmware. You are solely responsible for your actions.
+
 
 ## Installation
 The FlipperHTTP firmware supports eight boards. Instructions for each board can be found below:
